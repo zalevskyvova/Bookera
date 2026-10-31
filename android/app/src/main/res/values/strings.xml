@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Bookera</string>
+    <string name="title_activity_main">Bookera</string>
+    <string name="package_name">com.bookera.ranobereader</string>
+    <string name="custom_url_scheme">com.bookera.ranobereader</string>
+</resources>
