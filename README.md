@@ -4,7 +4,7 @@
   <img src="public/logo.png" width="128" height="128" alt="Bookera Logo" style="border-radius: 24px;" />
 </p>
 
-> **Offline Android Reader**: High-performance offline light novel and book reader for Android engineered with RanobeLib-inspired reading ergonomics, stream-based multi-format parsing, smart chapter detection, and customizable reading palettes.
+> **Offline Android Reader**: High-performance offline light novel and book reader for Android engineered with streamlined reading ergonomics, stream-based multi-format parsing, smart chapter detection, and customizable reading palettes.
 
 [![Android](https://img.shields.io/badge/Platform-Android_7.0+-161B22?style=flat-square&logo=android&logoColor=white)](https://developer.android.com)
 [![React](https://img.shields.io/badge/React-19.0-161B22?style=flat-square&logo=react&logoColor=white)](https://react.dev)
@@ -17,18 +17,10 @@
 
 ---
 
-## Application Preview
-
-![Bookera Application Preview](preview.jpg)
-
-*Bookera reading canvas featuring AMOLED dark background (#0a0a0a), soft typography (#bdbdbd), top status bar spacer shield, floating navigation controls, and side-by-side RanobeLib ergonomic alignment.*
-
----
-
 ## Table of Contents
 
-- [Application Preview](#application-preview)
 - [Overview](#overview)
+- [Screenshots](#screenshots)
 - [Design Philosophy](#design-philosophy)
 - [Key Features](#key-features)
 - [Architecture and Storage Engine](#architecture-and-storage-engine)
@@ -44,15 +36,27 @@
 
 ## Overview
 
-Bookera is an offline-first reading platform and native Android client built specifically for light novels, web serials, and long-form e-books. Mainstream reader applications often force heavy cloud logins, synchronize reading data with external servers, or lack the responsive typography, spacing, and chapter navigation controls popularized by specialized online novel platforms like RanobeLib.
+Bookera is an offline-first reading platform and native Android client built specifically for light novels, web serials, and long-form e-books. Mainstream reader applications often force heavy cloud logins, synchronize reading data with external servers, or lack the responsive typography, spacing, and chapter navigation controls popularized by modern digital novel platforms.
 
 Bookera bridges this gap by delivering a lightweight single-page application wrapped in a native Capacitor Android container. The entire application operates 100% locally on device storage without internet access requirements, advertising SDKs, or background telemetry.
 
 ---
 
+## Screenshots
+
+| Library & Bookshelf | Immersive Reading Canvas | Navigation & Controls |
+| :---: | :---: | :---: |
+| <img src="Screenshots/01_library_view.png" width="240" alt="Library View" /> | <img src="Screenshots/02_reader_view.png" width="240" alt="Immersive Reading Canvas" /> | <img src="Screenshots/03_reader_menus.png" width="240" alt="Reader Navigation Controls" /> |
+
+| Table of Contents | Reader Settings | Bookmarks Drawer |
+| :---: | :---: | :---: |
+| <img src="Screenshots/04_table_of_contents.png" width="240" alt="Table of Contents" /> | <img src="Screenshots/05_reader_settings.png" width="240" alt="Reader Settings Modal" /> | <img src="Screenshots/06_bookmarks_drawer.png" width="240" alt="Bookmarks Drawer" /> |
+
+---
+
 ## Design Philosophy
 
-- **RanobeLib Reading Ergonomics**: Clean text-first presentation with floating top app bars and bottom control drawers that toggle on screen tap or directional scrolling.
+- **Ergonomic Reader Navigation**: Clean text-first presentation with floating top app bars and bottom control drawers that toggle on screen tap or directional scrolling.
 - **Calibrated Color Reproduction**: Default AMOLED Dark theme precision-tuned to `#0a0a0a` background and `#bdbdbd` text luminance, avoiding excessive contrast while matching mobile web rendering pixel-by-pixel.
 - **Top Notch and Punch-Hole Shielding**: A dedicated status bar spacer (`TopStatusBarSpacer`) safeguards reading text from being obscured under front camera cutouts and curved displays.
 - **Zero Memory Exhaustion**: Heavy books containing hundreds of embedded illustrations (such as 190 MB FB2 archives) are parsed through streaming regular expressions rather than monolithic browser DOM trees, preventing browser crashes.
@@ -152,8 +156,13 @@ Bookera/
 |   |   `-- build.gradle
 |   `-- variables.gradle
 |-- public/                          # Static public assets
-|-- screenshots/                     # Application screenshots and previews
-|   `-- photo_2026-10-31_20-14-22.jpg
+|-- Screenshots/                     # High-resolution application screenshots
+|   |-- 01_library_view.png
+|   |-- 02_reader_view.png
+|   |-- 03_reader_menus.png
+|   |-- 04_table_of_contents.png
+|   |-- 05_reader_settings.png
+|   `-- 06_bookmarks_drawer.png
 |-- src/
 |   |-- components/
 |   |   |-- UI/
@@ -174,7 +183,7 @@ Bookera/
 |   |   |   |-- fb2Parser.ts         # High-speed regex FB2 parser
 |   |   |   |-- pdfParser.ts         # PDF text extraction
 |   |   |   `-- txtParser.ts         # Plain text chapter splitter
-|   |   |-- sampleNovel.ts           # Bundled offline sample novel
+|   |   |-- i18n.ts                  # Localization engine (UK, EN, RU)
 |   |   `-- storage.ts               # IndexedDB v2 data abstraction layer
 |   |-- types/
 |   |   `-- book.ts                  # Core TypeScript interfaces and defaults
@@ -184,7 +193,6 @@ Bookera/
 |-- capacitor.config.json            # Capacitor bridge configuration
 |-- index.html                       # HTML5 entry with mobile meta tags
 |-- package.json                     # NPM project metadata and scripts
-|-- preview.jpg                      # Preview image for repository documentation
 |-- tailwind.config.js               # Tailwind design system configuration
 |-- tsconfig.json                    # TypeScript compiler configuration
 `-- vite.config.ts                   # Vite bundler configuration
@@ -257,9 +265,9 @@ android/app/build/outputs/apk/debug/app-debug.apk
 
 - **2026-10-31: Project Inception and Core Reading Engine**
   - Scaffolded React 19 + TypeScript + Vite + Tailwind CSS architecture.
-  - Implemented RanobeLib visual layout featuring top app bar, bottom navigation bar, and dark theme baseline.
+  - Implemented modern visual layout featuring top app bar, bottom navigation bar, and dark theme baseline.
   - Built IndexedDB v1 storage engine for books, bookmarks, and settings.
-  - Created bundled demo novel (Re:Zero Arc 7) for immediate verification.
+  - Built reading engine validation baseline for multi-chapter parsing.
 
 - **2026-10-31: Android 14 (API 34) Compatibility and Native Gradle Setup**
   - Configured Capacitor 7 Android bridge with compileSdk 34 and targetSdk 34.

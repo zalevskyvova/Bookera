@@ -1,12 +1,14 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { X, Search, ListOrdered, Check } from 'lucide-react';
-import { Chapter } from '../types/book';
+import { Chapter, Language } from '../types/book';
+import { t } from '../services/i18n';
 
 interface TableOfContentsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   chapters: Chapter[];
   currentChapterId: string;
+  language?: Language;
   onSelectChapter: (chapterId: string, index: number) => void;
 }
 
@@ -15,6 +17,7 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
   onClose,
   chapters,
   currentChapterId,
+  language = 'uk',
   onSelectChapter,
 }) => {
   const [search, setSearch] = useState('');
@@ -43,7 +46,10 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-start bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex justify-start bg-black/70 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
+    >
       <div
         className="w-full max-w-md h-full bg-[#191a1e] border-r border-[#2c2e36] text-neutral-200 flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -55,9 +61,9 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
         >
           <div className="flex items-center gap-2">
             <ListOrdered className="w-5 h-5 text-[#2196f3]" />
-            <h2 className="text-lg font-bold text-white tracking-wide">Зміст</h2>
+            <h2 className="text-lg font-bold text-white tracking-wide">{t('tableOfContents', language)}</h2>
             <span className="text-xs font-mono bg-[#282a33] text-neutral-300 px-2 py-0.5 rounded-full ml-1">
-              {chapters.length} глав
+              {chapters.length}
             </span>
           </div>
           <button
@@ -75,7 +81,7 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
             <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
             <input
               type="text"
-              placeholder="Пошук глави за назвою або номером..."
+              placeholder={t('searchChapters', language)}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-[#22242c] border border-[#30333e] rounded-lg pl-10 pr-4 py-2 text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-[#2196f3]"
@@ -87,7 +93,7 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
           {filteredChapters.length === 0 ? (
             <div className="text-center py-8 text-neutral-500 text-sm">
-              Глав за запитом "{search}" не знайдено
+              {t('noChapters', language)}
             </div>
           ) : (
             filteredChapters.map(({ ch, originalIndex }) => {

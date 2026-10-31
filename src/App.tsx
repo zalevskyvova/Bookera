@@ -6,10 +6,9 @@ import {
   saveBook,
   deleteBook,
   loadSettings,
-  isDemoInitialized,
-  markDemoInitialized,
+  saveSettings,
 } from './services/storage';
-import { SAMPLE_NOVEL } from './services/sampleNovel';
+import { t } from './services/i18n';
 import { LibraryView } from './components/LibraryView';
 import { ReaderView } from './components/ReaderView';
 
@@ -22,15 +21,7 @@ export function App() {
   // Initialize books and settings
   const refreshBooks = useCallback(async () => {
     const list = await getAllBooks();
-    const demoInit = await isDemoInitialized();
-    if (list.length === 0 && !demoInit) {
-      // First run only: save demo novel
-      await saveBook(SAMPLE_NOVEL);
-      await markDemoInitialized();
-      setBooks([{ ...SAMPLE_NOVEL, chapters: [] }]);
-    } else {
-      setBooks(list);
-    }
+    setBooks(list);
   }, []);
 
   useEffect(() => {
@@ -59,9 +50,15 @@ export function App() {
   };
 
   const handleBackToLibrary = async () => {
-    const [latestSettings] = await Promise.all([loadSettings(), refreshBooks()]);
+    const [latestSettings, list] = await Promise.all([loadSettings(), getAllBooks()]);
     setSettings(latestSettings);
+    setBooks(list);
     setActiveBook(null);
+  };
+
+  const handleUpdateSettings = async (newSettings: ReaderSettings) => {
+    setSettings(newSettings);
+    await saveSettings(newSettings);
   };
 
   const handleAddBook = async (newBook: Book) => {
@@ -85,9 +82,9 @@ export function App() {
           <img
             src="/logo.png"
             alt="Bookera"
-            className="w-14 h-14 rounded-2xl shadow-xl shadow-[#0d3d8a]/30 animate-pulse"
+            className="w-16 h-16 rounded-2xl shadow-xl shadow-[#0d3d8a]/40 border border-[#1e58b8]/30 animate-pulse object-contain"
           />
-          <p className="text-xs font-mono text-neutral-400">Ініціалізація Bookera...</p>
+          <p className="text-xs font-mono text-neutral-400">{t('initializing', settings.language)}</p>
         </div>
       </div>
     );
@@ -106,6 +103,8 @@ export function App() {
   return (
     <LibraryView
       books={books}
+      settings={settings}
+      onUpdateSettings={handleUpdateSettings}
       onOpenBook={handleOpenBook}
       onAddBook={handleAddBook}
       onDeleteBook={handleDeleteBook}

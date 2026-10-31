@@ -56,11 +56,13 @@ export function parseFb2Content(fileName: string, content: string): Book {
 
   // 4. Pattern for chapter headers
   const chapterRegex = /^\s*(?:глава|розділ|том|часть|частина|chapter|act|акт|эпизод|інтерлюдія|интерлюдия|пролог|эпилог|епілог)\s*[\dIVXLCDM.:\s_-]*/i;
+  const isEnglish = /[a-zA-Z]{4,}/.test(title);
+  const defaultPrefix = isEnglish ? 'Chapter' : 'Глава';
 
   const itemRegex = /<(p|title|subtitle|empty-line)[^>]*>([\s\S]*?)<\/\1>|<empty-line\s*\/>/gi;
 
   const chapters: Chapter[] = [];
-  let currentTitle = 'Початок';
+  let currentTitle = '';
   let currentParagraphs: string[] = [];
   let chOrder = 1;
 
@@ -92,27 +94,29 @@ export function parseFb2Content(fileName: string, content: string): Book {
         !paraText.includes(',') &&
         !paraText.endsWith('.'));
 
-    if (isHeading && currentParagraphs.length > 0) {
-      // Collect only images used in this specific chapter
-      const chapterImages: Record<string, string> = {};
-      for (const p of currentParagraphs) {
-        const m = p.match(/^\[IMG:(.+)\]$/);
-        if (m && imagesMap[m[1]]) {
-          chapterImages[m[1]] = imagesMap[m[1]];
+    if (isHeading) {
+      if (currentParagraphs.length > 0) {
+        // Collect only images used in this specific chapter
+        const chapterImages: Record<string, string> = {};
+        for (const p of currentParagraphs) {
+          const m = p.match(/^\[IMG:(.+)\]$/);
+          if (m && imagesMap[m[1]]) {
+            chapterImages[m[1]] = imagesMap[m[1]];
+          }
         }
-      }
 
-      chapters.push({
-        id: `ch_${chOrder}`,
-        title: currentTitle,
-        order: chOrder,
-        content: [...currentParagraphs],
-        images: chapterImages,
-      });
-      chOrder++;
-      currentParagraphs = [];
+        chapters.push({
+          id: `ch_${chOrder}`,
+          title: currentTitle || `${defaultPrefix} ${chOrder}`,
+          order: chOrder,
+          content: [...currentParagraphs],
+          images: chapterImages,
+        });
+        chOrder++;
+        currentParagraphs = [];
+      }
       currentTitle = paraText;
-    } else if (!isHeading) {
+    } else {
       currentParagraphs.push(paraText);
     }
   }
@@ -129,7 +133,7 @@ export function parseFb2Content(fileName: string, content: string): Book {
 
     chapters.push({
       id: `ch_${chOrder}`,
-      title: currentTitle,
+      title: currentTitle || `${defaultPrefix} ${chOrder}`,
       order: chOrder,
       content: currentParagraphs,
       images: chapterImages,

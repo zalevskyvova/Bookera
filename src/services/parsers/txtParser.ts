@@ -7,8 +7,11 @@ export function parseTxtContent(fileName: string, content: string): Book {
   // Chapter detection patterns for light novels, web novels, books
   const chapterRegex = /^\s*(?:глава|розділ|том|часть|частина|chapter|act|акт|эпизод|інтерлюдія|интерлюдия|пролог|эпилог|епілог)\s*[\dIVXLCDM.:\s_-]*/i;
   
+  const isEnglish = /[a-zA-Z]{4,}/.test(title + ' ' + content.slice(0, 500));
+  const defaultPrefix = isEnglish ? 'Chapter' : 'Глава';
+  
   const chapters: Chapter[] = [];
-  let currentChapterTitle = "Пролог";
+  let currentChapterTitle = "";
   let currentParagraphs: string[] = [];
   let chapterIndex = 1;
 
@@ -21,7 +24,7 @@ export function parseTxtContent(fileName: string, content: string): Book {
       if (currentParagraphs.length > 0) {
         chapters.push({
           id: `ch_${chapterIndex}`,
-          title: currentChapterTitle,
+          title: currentChapterTitle || `${defaultPrefix} ${chapterIndex}`,
           order: chapterIndex,
           content: [...currentParagraphs],
         });
@@ -38,7 +41,7 @@ export function parseTxtContent(fileName: string, content: string): Book {
   if (currentParagraphs.length > 0) {
     chapters.push({
       id: `ch_${chapterIndex}`,
-      title: currentChapterTitle,
+      title: currentChapterTitle || `${defaultPrefix} ${chapterIndex}`,
       order: chapterIndex,
       content: currentParagraphs,
     });
@@ -55,7 +58,7 @@ export function parseTxtContent(fileName: string, content: string): Book {
       const chNum = Math.floor(c / chunkSize) + 1;
       chunkedChapters.push({
         id: `ch_${chNum}`,
-        title: `Частина ${chNum}`,
+        title: isEnglish ? `Part ${chNum}` : `Частина ${chNum}`,
         order: chNum,
         content: chunk,
       });
@@ -66,9 +69,9 @@ export function parseTxtContent(fileName: string, content: string): Book {
   if (chapters.length === 0) {
     chapters.push({
       id: 'ch_1',
-      title: 'Початок',
+      title: title || (isEnglish ? 'Chapter 1' : 'Глава 1'),
       order: 1,
-      content: ['Текст відсутній або порожній.'],
+      content: [isEnglish ? 'No text content found.' : 'Текст відсутній або порожній.'],
     });
   }
 

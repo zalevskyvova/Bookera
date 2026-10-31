@@ -107,7 +107,9 @@ export async function parseEpubFile(
 
     const chapterRegex = /^\s*(?:глава|розділ|том|часть|частина|chapter|act|акт|эпизод|інтерлюдія|интерлюдия|пролог|эпилог|епілог)\s*[\dIVXLCDM.:\s_-]*/i;
 
-    let chapterTitle = doc.querySelector('h1, h2, h3, title')?.textContent?.trim() || `Розділ ${chIndex}`;
+    const isEnglish = /[a-zA-Z]{4,}/.test(title);
+    const defaultPrefix = isEnglish ? 'Chapter' : 'Розділ';
+    let chapterTitle = doc.querySelector('h1, h2, h3, title')?.textContent?.trim() || `${defaultPrefix} ${chIndex}`;
     chapterTitle = chapterTitle.replace(/\s+/g, ' ').substring(0, 80);
 
     let paragraphs: string[] = [];

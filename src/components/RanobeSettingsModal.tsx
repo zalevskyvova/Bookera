@@ -1,9 +1,10 @@
 import React from 'react';
-import { X, ChevronDown } from 'lucide-react';
-import { ReaderSettings, ThemePreset, THEME_PALETTES, DEFAULT_SETTINGS } from '../types/book';
+import { X, ChevronDown, Globe } from 'lucide-react';
+import { ReaderSettings, ThemePreset, THEME_PALETTES, DEFAULT_SETTINGS, Language } from '../types/book';
 import { Toggle } from './UI/Toggle';
 import { Slider } from './UI/Slider';
 import { SegmentedControl } from './UI/SegmentedControl';
+import { t } from '../services/i18n';
 
 interface RanobeSettingsModalProps {
   isOpen: boolean;
@@ -63,14 +64,17 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
+    >
       <div
         className="w-full max-w-lg max-h-[85vh] bg-[#191a1e] border border-[#2c2e36] text-neutral-200 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#2c2e36]">
-          <h2 className="text-lg font-bold text-white tracking-wide">Налаштування</h2>
+          <h2 className="text-lg font-bold text-white tracking-wide">{t('settings', settings.language)}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -82,20 +86,37 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
 
         {/* Scrollable Content */}
         <div className="overflow-y-auto px-5 py-3 space-y-4 text-sm divide-y divide-[#2c2e36]/60">
-          {/* Preset Selector */}
+          {/* Language Selector */}
           <div className="pt-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Globe className="w-4 h-4 text-[#2196f3]" />
+              <span className="text-sm font-medium text-neutral-200">{t('language', settings.language)}</span>
+            </div>
+            <SegmentedControl
+              options={[
+                { value: 'uk', label: 'Українська' },
+                { value: 'en', label: 'English' },
+                { value: 'ru', label: 'Русский' },
+              ]}
+              value={settings.language || 'uk'}
+              onChange={(val) => update('language', val as Language)}
+            />
+          </div>
+
+          {/* Preset Selector */}
+          <div className="pt-3">
             <div className="relative">
               <select
                 value="default"
                 onChange={(e) => {
                   if (e.target.value === 'reset') {
-                    onUpdateSettings(DEFAULT_SETTINGS);
+                    onUpdateSettings({ ...DEFAULT_SETTINGS, language: settings.language });
                   }
                 }}
                 className="w-full appearance-none bg-[#24262e] border border-[#343743] rounded-lg px-4 py-2.5 text-neutral-200 text-sm font-medium focus:outline-none focus:border-[#2196f3]"
               >
-                <option value="default">За замовчуванням</option>
-                <option value="reset">Скинути всі налаштування</option>
+                <option value="default">{t('defaultPreset', settings.language)}</option>
+                <option value="reset">{t('resetSettings', settings.language)}</option>
               </select>
               <ChevronDown className="w-4 h-4 text-neutral-400 absolute right-3 top-3 pointer-events-none" />
             </div>
@@ -103,7 +124,7 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
 
           {/* Color Themes */}
           <div className="pt-3">
-            <label className="block text-sm font-medium text-neutral-300 mb-3">Кольорова тема</label>
+            <label className="block text-sm font-medium text-neutral-300 mb-3">{t('colorTheme', settings.language)}</label>
             <div className="grid grid-cols-6 gap-2 mb-3">
               {themeList.map((t) => {
                 const isSelected = settings.theme === t.preset;
@@ -126,7 +147,7 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
             {/* Custom Interactive Color Pickers */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div className="flex flex-col gap-1.5 p-2.5 bg-[#22242c] rounded-lg border border-[#2e313b]">
-                <span className="text-xs text-neutral-400 font-medium">Колір фону</span>
+                <span className="text-xs text-neutral-400 font-medium">{t('customBg', settings.language)}</span>
                 <div className="flex items-center gap-2">
                   <label className="relative w-8 h-8 rounded-lg border border-neutral-600 shadow-inner overflow-hidden cursor-pointer shrink-0 block">
                     <input
@@ -154,7 +175,7 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
               </div>
 
               <div className="flex flex-col gap-1.5 p-2.5 bg-[#22242c] rounded-lg border border-[#2e313b]">
-                <span className="text-xs text-neutral-400 font-medium">Колір тексту</span>
+                <span className="text-xs text-neutral-400 font-medium">{t('customText', settings.language)}</span>
                 <div className="flex items-center gap-2">
                   <label className="relative w-8 h-8 rounded-lg border border-neutral-600 shadow-inner overflow-hidden cursor-pointer shrink-0 block">
                     <input
@@ -186,10 +207,10 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
           {/* Side Padding Toggle */}
           <div className="pt-3">
             <SegmentedControl
-              label="Відступ від країв"
+              label={t('sidePadding', settings.language)}
               options={[
-                { value: true, label: 'Увімкнено' },
-                { value: false, label: 'Вимкнено' },
+                { value: true, label: t('enabled', settings.language) },
+                { value: false, label: t('disabled', settings.language) },
               ]}
               value={settings.sidePadding}
               onChange={(val) => update('sidePadding', val)}
@@ -199,10 +220,10 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
           {/* Text Alignment */}
           <div className="pt-3">
             <SegmentedControl
-              label="Вирівнювання тексту"
+              label={t('textAlign', settings.language)}
               options={[
-                { value: 'left', label: 'По лівому краю' },
-                { value: 'justify', label: 'По ширині' },
+                { value: 'left', label: t('alignLeft', settings.language) },
+                { value: 'justify', label: t('alignJustify', settings.language) },
               ]}
               value={settings.textAlign}
               onChange={(val) => update('textAlign', val)}
@@ -212,10 +233,10 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
           {/* Menu Trigger */}
           <div className="pt-3">
             <SegmentedControl
-              label="Показати або приховати меню"
+              label={t('menuTrigger', settings.language)}
               options={[
-                { value: 'tap', label: 'Натисканням' },
-                { value: 'scroll', label: 'Скролом' },
+                { value: 'tap', label: t('triggerTap', settings.language) },
+                { value: 'scroll', label: t('triggerScroll', settings.language) },
               ]}
               value={settings.menuTrigger}
               onChange={(val) => update('menuTrigger', val)}
@@ -224,19 +245,19 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
 
           {/* Font Family */}
           <div className="pt-3">
-            <label className="block mb-2 text-sm font-medium text-neutral-200">Шрифт</label>
+            <label className="block mb-2 text-sm font-medium text-neutral-200">{t('fontFamily', settings.language)}</label>
             <div className="relative">
               <select
                 value={settings.fontFamily}
                 onChange={(e) => update('fontFamily', e.target.value as ReaderSettings['fontFamily'])}
                 className="w-full appearance-none bg-[#24262e] border border-[#343743] rounded-lg px-4 py-2.5 text-neutral-200 text-sm font-medium focus:outline-none focus:border-[#2196f3]"
               >
-                <option value="default">За замовчуванням (Roboto/System)</option>
-                <option value="serif">Класичний із зарубками (Serif)</option>
+                <option value="default">{t('fontDefault', settings.language)}</option>
+                <option value="serif">{t('fontSerif', settings.language)}</option>
                 <option value="pt-serif">PT Serif / Merriweather</option>
                 <option value="georgia">Georgia</option>
-                <option value="sans-serif">Чистий без зарубок (Sans-Serif)</option>
-                <option value="monospace">Моноширинний (Monospace)</option>
+                <option value="sans-serif">{t('fontSans', settings.language)}</option>
+                <option value="monospace">{t('fontMonospace', settings.language)}</option>
               </select>
               <ChevronDown className="w-4 h-4 text-neutral-400 absolute right-3 top-3 pointer-events-none" />
             </div>
@@ -245,12 +266,12 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
           {/* Toggles */}
           <div className="pt-3 space-y-1">
             <Toggle
-              label="Вимкнути зображення для економії пам'яті"
+              label={t('disableImagesOpt', settings.language)}
               checked={settings.disableImages}
               onChange={(val) => update('disableImages', val)}
             />
             <Toggle
-              label="Вимкнути номер і назву глави в тексті"
+              label={t('hideChapterHeaderOpt', settings.language)}
               checked={settings.hideChapterHeader}
               onChange={(val) => update('hideChapterHeader', val)}
             />
@@ -259,7 +280,7 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
           {/* Sliders */}
           <div className="pt-3 space-y-1">
             <Slider
-              label="Розмір шрифту"
+              label={t('fontSize', settings.language)}
               value={settings.fontSize}
               min={12}
               max={32}
@@ -268,7 +289,7 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
               onChange={(val) => update('fontSize', val)}
             />
             <Slider
-              label="Висота рядків"
+              label={t('lineHeight', settings.language)}
               value={settings.lineHeight}
               min={1.0}
               max={2.5}
@@ -277,7 +298,7 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
               onChange={(val) => update('lineHeight', Math.round(val * 10) / 10)}
             />
             <Slider
-              label="Відступ між абзацами"
+              label={t('paragraphSpacing', settings.language)}
               value={settings.paragraphSpacing}
               min={0}
               max={30}
@@ -286,7 +307,7 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
               onChange={(val) => update('paragraphSpacing', val)}
             />
             <Slider
-              label="Ширина контейнера"
+              label={t('containerWidth', settings.language)}
               value={settings.containerWidth}
               min={70}
               max={100}
@@ -304,7 +325,7 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
             onClick={onClose}
             className="w-full py-2.5 bg-[#2196f3] hover:bg-[#1e88e5] text-white font-medium text-sm rounded-lg transition-colors shadow"
           >
-            Застосувати
+            OK
           </button>
         </div>
       </div>

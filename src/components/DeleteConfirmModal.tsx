@@ -1,10 +1,12 @@
 import React from 'react';
 import { Trash2, X } from 'lucide-react';
-import { Book } from '../types/book';
+import { Book, Language } from '../types/book';
+import { t } from '../services/i18n';
 
 interface DeleteConfirmModalProps {
   isOpen: boolean;
   book: Book | null;
+  language?: Language;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -12,6 +14,7 @@ interface DeleteConfirmModalProps {
 export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   isOpen,
   book,
+  language = 'uk',
   onConfirm,
   onCancel,
 }) => {
@@ -32,7 +35,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
               <Trash2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Видалити книгу?</h3>
+              <h3 className="text-base font-bold text-white">{t('deleteConfirmTitle', language)}</h3>
               <p className="text-xs text-neutral-400 line-clamp-1">{book.title}</p>
             </div>
           </div>
@@ -46,7 +49,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
         </div>
 
         <p className="text-xs text-neutral-300 leading-relaxed bg-[#141518] p-3 rounded-xl border border-[#272832]">
-          Ви впевнені, що хочете видалити цю книгу з бібліотеки? Усі збережені закладки та прогрес читання буде безповоротно очищено.
+          {t('deleteConfirmDesc', language)} &ldquo;{book.title}&rdquo;? {t('deleteConfirmWarn', language)}
         </p>
 
         <div className="grid grid-cols-2 gap-2.5 pt-1">
@@ -55,14 +58,14 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
             onClick={onCancel}
             className="w-full py-2.5 rounded-xl bg-[#282a33] hover:bg-[#323541] text-neutral-200 text-xs font-semibold transition-colors"
           >
-            Скасувати
+            {t('cancel', language)}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-md shadow-red-950 transition-colors"
+            className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors shadow-lg shadow-red-900/30"
           >
-            Видалити
+            {t('deleteBook', language)}
           </button>
         </div>
       </div>

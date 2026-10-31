@@ -9,11 +9,12 @@ import {
   BookmarkCheck,
   CheckCircle2,
 } from 'lucide-react';
-import { Book, Chapter, ReaderSettings, Bookmark } from '../types/book';
+import { Book, Chapter, ReaderSettings, Bookmark, Language } from '../types/book';
 import { RanobeSettingsModal } from './RanobeSettingsModal';
 import { BookmarksDrawer } from './BookmarksDrawer';
 import { TableOfContentsDrawer } from './TableOfContentsDrawer';
 import { ImageViewerModal } from './ImageViewerModal';
+import { t } from '../services/i18n';
 import {
   updateReadingProgress,
   addBookmark,
@@ -33,6 +34,7 @@ interface ChapterBodyProps {
   hideChapterHeader: boolean;
   disableImages: boolean;
   paragraphSpacing: number;
+  language: Language;
   onBookmarkParagraph: (idx: number, text: string) => void;
   onOpenImage: (src: string) => void;
 }
@@ -43,6 +45,7 @@ const ChapterBody: React.FC<ChapterBodyProps> = memo(
     hideChapterHeader,
     disableImages,
     paragraphSpacing,
+    language,
     onBookmarkParagraph,
     onOpenImage,
   }) => {
@@ -67,7 +70,7 @@ const ChapterBody: React.FC<ChapterBodyProps> = memo(
                     key={idx}
                     className="p-3 my-4 bg-black/20 rounded border border-neutral-700/20 text-center text-xs opacity-50 italic"
                   >
-                    Зображення вимкнено в налаштуваннях
+                    {t('imagesDisabled', language)}
                   </div>
                 );
               }
@@ -77,7 +80,7 @@ const ChapterBody: React.FC<ChapterBodyProps> = memo(
                 <div key={idx} className="my-6 flex justify-center">
                   <img
                     src={imgSrc}
-                    alt="Ілюстрація"
+                    alt={t('illustration', language)}
                     loading="lazy"
                     decoding="async"
                     onClick={(e) => {
@@ -95,6 +98,7 @@ const ChapterBody: React.FC<ChapterBodyProps> = memo(
                 key={idx}
                 id={`p-${idx}`}
                 data-paragraph-index={idx}
+                className="select-text"
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   onBookmarkParagraph(idx, paragraph);
@@ -296,21 +300,21 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
 
         const added = await addBookmark(bookmark);
         await loadBookmarks();
-        showToast(added ? 'Закладку збережено' : 'Закладка на цьому місці вже існує');
+        showToast(added ? t('bookmarkAdded', settings.language) : t('bookmarkAdded', settings.language));
       } finally {
         isAddingBookmarkRef.current = false;
       }
     },
-    [book.id, currentChapter, loadBookmarks, showToast]
+    [book.id, currentChapter, loadBookmarks, showToast, settings.language]
   );
 
   const handleDeleteBookmark = useCallback(
     async (id: string) => {
       await removeBookmark(id);
       await loadBookmarks();
-      showToast('Закладку видалено');
+      showToast(t('bookmarkRemoved', settings.language));
     },
-    [loadBookmarks, showToast]
+    [loadBookmarks, showToast, settings.language]
   );
 
   const handleSelectBookmark = useCallback(
@@ -364,7 +368,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
         aria-hidden="true"
         className="fixed top-0 left-0 right-0 z-50 bg-[#1c1c1e] border-b border-[#2c2c2e] shadow-sm pointer-events-none select-none transition-colors"
         style={{
-          height: 'max(env(safe-area-inset-top, 0px), 34px)',
+          height: 'max(env(safe-area-inset-top, 0px), 38px)',
         }}
       />
 
@@ -372,7 +376,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
       {toastMessage && (
         <div
           className="fixed left-1/2 transform -translate-x-1/2 z-50 bg-[#252527] text-white border border-[#333336] px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs font-medium animate-in fade-in duration-200"
-          style={{ top: 'calc(max(env(safe-area-inset-top, 0px), 34px) + 16px)' }}
+          style={{ top: 'calc(max(env(safe-area-inset-top, 0px), 38px) + 16px)' }}
         >
           <CheckCircle2 className="w-4 h-4 text-[#2196f3]" />
           <span>{toastMessage}</span>
@@ -385,7 +389,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
           showBars ? 'translate-y-0' : '-translate-y-full'
         }`}
         style={{
-          top: 'max(env(safe-area-inset-top, 0px), 34px)',
+          top: 'max(env(safe-area-inset-top, 0px), 38px)',
         }}
       >
         <div className="flex items-center gap-3 truncate pr-2">
@@ -393,14 +397,14 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
             type="button"
             onClick={onBack}
             className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-[#252730] transition-colors"
-            title="До бібліотеки"
+            title={t('backToLibrary', settings.language)}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="truncate">
             <div className="text-xs text-neutral-400 truncate">{book.title}</div>
             <div className="text-sm font-semibold text-white truncate">
-              {currentChapter?.title || 'Глава'}
+              {currentChapter?.title || t('chapter', settings.language)}
             </div>
           </div>
         </div>
@@ -414,7 +418,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
                 ? 'text-[#2196f3] bg-[#2196f3]/15 hover:bg-[#2196f3]/25'
                 : 'text-neutral-300 hover:text-white hover:bg-[#252730]'
             }`}
-            title="Додати закладку"
+            title={t('addBookmark', settings.language)}
           >
             {isCurrentChapterBookmarked ? (
               <BookmarkCheck className="w-5 h-5" />
@@ -427,7 +431,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
             type="button"
             onClick={() => setIsBookmarksOpen(true)}
             className="p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-[#252730] transition-colors"
-            title="Список закладок"
+            title={t('bookmarksList', settings.language)}
           >
             <BookmarkIcon className="w-5 h-5 fill-current opacity-70" />
           </button>
@@ -436,7 +440,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
             type="button"
             onClick={() => setIsTocOpen(true)}
             className="p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-[#252730] transition-colors"
-            title="Зміст"
+            title={t('tableOfContents', settings.language)}
           >
             <ListOrdered className="w-5 h-5" />
           </button>
@@ -445,7 +449,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
             type="button"
             onClick={() => setIsSettingsOpen(true)}
             className="p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-[#252730] transition-colors"
-            title="Налаштування"
+            title={t('settings', settings.language)}
           >
             <Sliders className="w-5 h-5" />
           </button>
@@ -463,8 +467,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
         }}
         className="flex-1 overflow-y-auto overscroll-contain"
         style={{
-          paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 34px) + 54px)',
-          paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 14px) + 64px)',
+          paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 38px) + 54px)',
+          paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 16px) + 64px)',
         }}
       >
         <div
@@ -483,6 +487,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
             hideChapterHeader={settings.hideChapterHeader}
             disableImages={settings.disableImages}
             paragraphSpacing={settings.paragraphSpacing}
+            language={settings.language}
             onBookmarkParagraph={handleAddBookmarkAtCurrent}
             onOpenImage={setZoomedImageSrc}
           />
@@ -490,7 +495,9 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
           {/* Chapter End & Enlarged Navigation Footer */}
           <div className="pt-10 pb-10 mt-10 border-t border-neutral-700/30 flex flex-col items-center gap-5">
             <div className="text-xs uppercase tracking-wider font-medium opacity-50">
-              Кінець глави
+              {currentChapterIndex >= book.chapters.length - 1
+                ? t('endOfBook', settings.language)
+                : t('endOfChapter', settings.language)}
             </div>
             <div className="grid grid-cols-2 gap-3.5 w-full max-w-md">
               <button
@@ -503,7 +510,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
                 className="w-full py-4 px-5 rounded-xl bg-[#24262f] text-neutral-100 border border-[#343744] hover:bg-[#2d303b] active:scale-[0.98] disabled:opacity-35 disabled:pointer-events-none text-base font-bold flex items-center justify-center gap-2 transition-all shadow-md"
               >
                 <ChevronLeft className="w-5 h-5 shrink-0" />
-                <span>Попередня</span>
+                <span>{t('prevChapter', settings.language)}</span>
               </button>
 
               <button
@@ -515,7 +522,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
                 }}
                 className="w-full py-4 px-5 rounded-xl bg-[#2196f3] text-white hover:bg-[#1e88e5] active:scale-[0.98] disabled:opacity-35 disabled:pointer-events-none text-base font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#2196f3]/20"
               >
-                <span>Наступна</span>
+                <span>{t('nextChapter', settings.language)}</span>
                 <ChevronRight className="w-5 h-5 shrink-0" />
               </button>
             </div>
@@ -529,7 +536,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
           showBars ? 'translate-y-0' : 'translate-y-full'
         }`}
         style={{
-          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
         }}
       >
         <button
@@ -537,7 +544,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
           disabled={currentChapterIndex <= 0}
           onClick={() => goToChapter(currentChapterIndex - 1)}
           className="p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-[#2a2a2e] disabled:opacity-30 disabled:pointer-events-none transition-colors"
-          title="Попередня глава"
+          title={t('prevChapter', settings.language)}
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -547,7 +554,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
           onClick={() => setIsTocOpen(true)}
           className="px-3 py-1.5 rounded-lg bg-[#252527] border border-[#333336] text-xs font-medium text-neutral-200 hover:bg-[#2e2e32] transition-colors"
         >
-          Глава {currentChapterIndex + 1} / {book.chapters.length} (
+          {t('chapter', settings.language)} {currentChapterIndex + 1} / {book.chapters.length} (
           {Math.round(((currentChapterIndex + 1) / book.chapters.length) * 100)}%)
         </button>
 
@@ -556,7 +563,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
           disabled={currentChapterIndex >= book.chapters.length - 1}
           onClick={() => goToChapter(currentChapterIndex + 1)}
           className="p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-[#2a2a2e] disabled:opacity-30 disabled:pointer-events-none transition-colors"
-          title="Наступна глава"
+          title={t('nextChapter', settings.language)}
         >
           <ChevronRight className="w-5 h-5" />
         </button>
@@ -574,6 +581,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
         isOpen={isBookmarksOpen}
         onClose={() => setIsBookmarksOpen(false)}
         bookmarks={bookmarks}
+        language={settings.language}
         onSelectBookmark={handleSelectBookmark}
         onDeleteBookmark={handleDeleteBookmark}
       />
@@ -582,12 +590,14 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
         isOpen={isTocOpen}
         onClose={() => setIsTocOpen(false)}
         chapters={book.chapters}
+        language={settings.language}
         currentChapterId={currentChapter?.id || ''}
         onSelectChapter={(_chId, idx) => goToChapter(idx)}
       />
 
       <ImageViewerModal
         src={zoomedImageSrc}
+        language={settings.language}
         onClose={() => setZoomedImageSrc(null)}
       />
     </div>

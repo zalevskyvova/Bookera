@@ -1,11 +1,13 @@
 import React from 'react';
 import { X, Bookmark, Trash2, ArrowRight } from 'lucide-react';
-import { Bookmark as BookmarkType } from '../types/book';
+import { Bookmark as BookmarkType, Language } from '../types/book';
+import { t } from '../services/i18n';
 
 interface BookmarksDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   bookmarks: BookmarkType[];
+  language?: Language;
   onSelectBookmark: (bookmark: BookmarkType) => void;
   onDeleteBookmark: (bookmarkId: string) => void;
 }
@@ -14,6 +16,7 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
   isOpen,
   onClose,
   bookmarks,
+  language = 'uk',
   onSelectBookmark,
   onDeleteBookmark,
 }) => {
@@ -21,11 +24,15 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
 
   const formatDate = (ts: number) => {
     const d = new Date(ts);
-    return `${d.toLocaleDateString('uk-UA')} ${d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}`;
+    const locale = language === 'en' ? 'en-US' : language === 'ru' ? 'ru-RU' : 'uk-UA';
+    return `${d.toLocaleDateString(locale)} ${d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
+    >
       <div
         className="w-full max-w-md h-full bg-[#191a1e] border-l border-[#2c2e36] text-neutral-200 flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -37,7 +44,7 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
         >
           <div className="flex items-center gap-2">
             <Bookmark className="w-5 h-5 text-[#2196f3]" />
-            <h2 className="text-lg font-bold text-white tracking-wide">Закладки</h2>
+            <h2 className="text-lg font-bold text-white tracking-wide">{t('bookmarksList', language)}</h2>
             <span className="text-xs font-mono bg-[#282a33] text-neutral-300 px-2 py-0.5 rounded-full ml-1">
               {bookmarks.length}
             </span>
@@ -58,9 +65,9 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
               <div className="w-16 h-16 rounded-full bg-[#23252d] flex items-center justify-center mb-4 text-neutral-500">
                 <Bookmark className="w-8 h-8 opacity-40" />
               </div>
-              <p className="text-base font-medium text-neutral-300 mb-1">У вас ще немає закладок</p>
+              <p className="text-base font-medium text-neutral-300 mb-1">{t('noBookmarks', language)}</p>
               <p className="text-xs text-neutral-500 max-w-xs">
-                Торкніться значка закладки у верхньому меню під час читання, щоб зафіксувати потрібний фрагмент.
+                {t('bookmarkTip', language)}
               </p>
             </div>
           ) : (
@@ -86,7 +93,7 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
                     className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 p-1 rounded transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>Видалити</span>
+                    <span>{t('deleteBookmarkBtn', language)}</span>
                   </button>
 
                   <button
@@ -94,7 +101,7 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
                     onClick={() => onSelectBookmark(bm)}
                     className="flex items-center gap-1 text-xs font-semibold text-[#2196f3] hover:text-[#42a5f5] px-2.5 py-1 bg-[#2196f3]/10 hover:bg-[#2196f3]/20 rounded-md transition-colors"
                   >
-                    <span>Перейти</span>
+                    <span>{t('goToBookmark', language)}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>

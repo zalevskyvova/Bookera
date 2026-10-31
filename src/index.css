@@ -11,8 +11,10 @@
   body {
     background-color: #141414;
     color: #dddddd;
-    user-select: text;
     color-scheme: dark light;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   /* Custom subtle scrollbars */

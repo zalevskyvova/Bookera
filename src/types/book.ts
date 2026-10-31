@@ -35,7 +35,10 @@ export interface Book {
 
 export type ThemePreset = 'white' | 'light' | 'sepia' | 'parchment' | 'slate' | 'black';
 
+export type Language = 'uk' | 'en' | 'ru';
+
 export interface ReaderSettings {
+  language: Language;
   theme: ThemePreset;
   customBgColor: string;
   customTextColor: string;
@@ -52,6 +55,7 @@ export interface ReaderSettings {
 }
 
 export const DEFAULT_SETTINGS: ReaderSettings = {
+  language: 'uk',
   theme: 'black',
   customBgColor: '#0a0a0a',
   customTextColor: '#bdbdbd',

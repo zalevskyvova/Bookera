@@ -1,12 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Language } from '../types/book';
+import { t } from '../services/i18n';
 
 interface ImageViewerModalProps {
   src: string | null;
+  language?: Language;
   onClose: () => void;
 }
 
-export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ src, onClose }) => {
+export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ src, language = 'uk', onClose }) => {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -191,7 +194,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ src, onClose
             onClick={handleZoomOut}
             disabled={scale <= 1}
             className="p-2 rounded-lg bg-[#23252e] text-neutral-200 hover:bg-[#2e313d] disabled:opacity-40 transition-colors"
-            title="Зменшити"
+            title={t('zoomOut', language)}
           >
             <ZoomOut className="w-4 h-4" />
           </button>
@@ -200,7 +203,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ src, onClose
             onClick={handleZoomIn}
             disabled={scale >= 5}
             className="p-2 rounded-lg bg-[#23252e] text-neutral-200 hover:bg-[#2e313d] disabled:opacity-40 transition-colors"
-            title="Збільшити"
+            title={t('zoomIn', language)}
           >
             <ZoomIn className="w-4 h-4" />
           </button>
@@ -209,7 +212,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ src, onClose
             onClick={handleReset}
             disabled={scale === 1 && position.x === 0 && position.y === 0}
             className="p-2 rounded-lg bg-[#23252e] text-neutral-200 hover:bg-[#2e313d] disabled:opacity-40 transition-colors"
-            title="Скинути масштаб"
+            title={t('resetZoom', language)}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -219,7 +222,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ src, onClose
           type="button"
           onClick={onClose}
           className="p-2 rounded-lg bg-[#23252e] text-neutral-200 hover:bg-red-900/60 hover:text-white transition-colors"
-          title="Закрити"
+          title={t('close', language)}
         >
           <X className="w-5 h-5" />
         </button>
@@ -232,13 +235,13 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ src, onClose
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
+        onMouseMove={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
         <img
           src={src}
-          alt="Перегляд ілюстрації"
+          alt={t('illustration', language)}
           draggable={false}
           onClick={(e) => e.stopPropagation()}
           onDoubleClick={(e) => {
@@ -268,7 +271,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ src, onClose
           paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
         }}
       >
-        Подвійний дотик або щипок двома пальцями для наближення
+        {t('imageViewerHint', language)}
       </div>
     </div>
   );
