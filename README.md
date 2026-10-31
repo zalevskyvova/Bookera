@@ -324,6 +324,6 @@ android/app/build/outputs/apk/debug/app-debug.apk
 
 ## License and Author
 
-Created and maintained by **SeriySpray** / **zalevskyvova** (`zalevskyvova@gmail.com`).
+Created and maintained by **zalevskyvova** (`zalevskyvova@gmail.com`).
 
 Released under the [MIT License](LICENSE).
