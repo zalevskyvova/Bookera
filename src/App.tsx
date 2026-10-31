@@ -80,9 +80,13 @@ export function App() {
 
   if (isInitializing) {
     return (
-      <div className="w-full h-screen bg-[#121316] text-neutral-300 flex items-center justify-center font-sans">
+      <div className="w-full h-screen bg-[#0a0a0a] text-neutral-300 flex items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-2 border-[#2196f3] border-t-transparent rounded-full animate-spin" />
+          <img
+            src="/logo.png"
+            alt="Bookera"
+            className="w-14 h-14 rounded-2xl shadow-xl shadow-[#0d3d8a]/30 animate-pulse"
+          />
           <p className="text-xs font-mono text-neutral-400">Ініціалізація Bookera...</p>
         </div>
       </div>

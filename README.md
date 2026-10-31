@@ -1,5 +1,9 @@
 # Bookera
 
+<p align="center">
+  <img src="public/logo.png" width="128" height="128" alt="Bookera Logo" style="border-radius: 24px;" />
+</p>
+
 > **Offline Android Reader**: High-performance offline light novel and book reader for Android engineered with RanobeLib-inspired reading ergonomics, stream-based multi-format parsing, smart chapter detection, and customizable reading palettes.
 
 [![Android](https://img.shields.io/badge/Platform-Android_7.0+-161B22?style=flat-square&logo=android&logoColor=white)](https://developer.android.com)

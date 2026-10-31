@@ -220,9 +220,11 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         style={{ marginTop: 'max(env(safe-area-inset-top, 0px), 34px)' }}
       >
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#2196f3] flex items-center justify-center text-white shadow-md shadow-[#2196f3]/20">
-            <BookOpen className="w-5 h-5" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Bookera Logo"
+            className="w-8 h-8 rounded-lg object-cover shadow-md shadow-[#0d3d8a]/40 border border-[#0d3d8a]/60"
+          />
           <div>
             <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">Bookera</h1>
             <p className="text-[10px] text-neutral-400 font-medium">Офлайн читалка новел та книг</p>
