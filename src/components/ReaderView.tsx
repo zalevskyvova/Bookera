@@ -202,6 +202,22 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
     onBack();
   };
 
+  const toggleBars = useCallback(() => {
+    setShowBars((prev) => {
+      const next = !prev;
+      // Compensate scrollTop when top bar collapses or expands so visible text remains perfectly stable
+      if (containerRef.current) {
+        const delta = 52;
+        if (!next) {
+          containerRef.current.scrollTop += delta;
+        } else {
+          containerRef.current.scrollTop = Math.max(0, containerRef.current.scrollTop - delta);
+        }
+      }
+      return next;
+    });
+  }, []);
+
   // Handle settings update
   const handleUpdateSettings = useCallback((newSettings: ReaderSettings) => {
     setSettings(newSettings);
@@ -264,10 +280,12 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
 
     if (settings.menuTrigger === 'scroll') {
       const delta = scrollTop - lastScrollY.current;
-      if (delta > 35 && scrollTop > 80) {
+      if (delta > 35 && scrollTop > 80 && showBars) {
         setShowBars(false);
-      } else if (delta < -35) {
+        container.scrollTop += 52;
+      } else if (delta < -35 && !showBars) {
         setShowBars(true);
+        container.scrollTop = Math.max(0, container.scrollTop - 52);
       }
     }
     lastScrollY.current = scrollTop;
@@ -412,7 +430,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
       {/* Camera / Status Bar Safe-Area Rectangle */}
       <div
         aria-hidden="true"
-        className="fixed top-0 left-0 right-0 z-50 pointer-events-none select-none transition-colors duration-200"
+        className="w-full shrink-0 z-50 pointer-events-none select-none transition-colors duration-200"
         style={{
           backgroundColor: resolvedBg,
           height: statusBarHeight,
@@ -423,22 +441,18 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
       {toastMessage && (
         <div
           className="fixed left-1/2 transform -translate-x-1/2 z-[70] bg-[#252527] text-white border border-[#333336] px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs font-medium animate-in fade-in duration-200"
-          style={{ top: `calc(${statusBarHeight} + 16px)` }}
+          style={{ top: `calc(${statusBarHeight} + 64px)` }}
         >
           <CheckCircle2 className="w-4 h-4 text-[#2196f3]" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Top Floating App Bar */}
+      {/* Top App Bar */}
       <div
-        className={`fixed left-0 right-2.5 sm:right-3 z-40 bg-[#252527] border-b border-[#303033] text-neutral-200 px-3 flex items-center justify-between transition-transform duration-200 shadow-md ${
-          showBars ? 'translate-y-0' : '-translate-y-full pointer-events-none'
+        className={`w-full shrink-0 z-40 bg-[#252527] border-b border-[#303033] text-neutral-200 px-3 flex items-center justify-between transition-all duration-200 overflow-hidden ${
+          showBars ? 'h-[52px] opacity-100 py-1.5' : 'h-0 opacity-0 py-0 border-b-0 pointer-events-none'
         }`}
-        style={{
-          top: statusBarHeight,
-          height: '52px',
-        }}
       >
         <div className="flex items-center gap-3 truncate pr-2">
           <button
@@ -510,13 +524,13 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
         onScroll={handleScroll}
         onClick={() => {
           if (settings.menuTrigger === 'tap') {
-            setShowBars((prev) => !prev);
+            toggleBars();
           }
         }}
-        className="w-full h-full overflow-y-auto overscroll-contain"
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
         style={{
-          paddingTop: `calc(${statusBarHeight} + 56px)`,
-          paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 16px) + 64px)',
+          paddingTop: '16px',
+          paddingBottom: '24px',
         }}
       >
         <div
@@ -578,15 +592,13 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
         </div>
       </div>
 
-      {/* Bottom Floating Bar */}
+      {/* Bottom Bar */}
       <div
-        className={`fixed left-0 right-2.5 sm:right-3 z-40 bg-[#1c1c1c] border-t border-[#2a2a2c] text-neutral-200 px-4 flex items-center justify-between transition-transform duration-200 shadow-lg ${
-          showBars ? 'translate-y-0' : 'translate-y-full pointer-events-none'
+        className={`w-full shrink-0 z-40 bg-[#1c1c1c] border-t border-[#2a2a2c] text-neutral-200 px-4 flex items-center justify-between transition-all duration-200 overflow-hidden ${
+          showBars ? 'h-[54px] opacity-100 py-2' : 'h-0 opacity-0 py-0 border-t-0 pointer-events-none'
         }`}
         style={{
-          bottom: 0,
-          height: '54px',
-          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+          paddingBottom: showBars ? 'max(env(safe-area-inset-bottom, 0px), 12px)' : '0px',
         }}
       >
         <button
