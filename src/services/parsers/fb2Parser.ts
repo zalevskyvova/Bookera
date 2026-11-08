@@ -1,6 +1,7 @@
-import { Book, Chapter } from '../../types/book';
+import { Book, Chapter, Language } from '../../types/book';
+import { t } from '../i18n';
 
-export function parseFb2Content(fileName: string, content: string): Book {
+export function parseFb2Content(fileName: string, content: string, lang: Language = 'uk'): Book {
   // 1. Extract metadata with fast regex
   const titleMatch = content.match(/<book-title[^>]*>([\s\S]*?)<\/book-title>/i);
   let title = titleMatch
@@ -10,11 +11,11 @@ export function parseFb2Content(fileName: string, content: string): Book {
   // Author
   const firstMatch = content.match(/<author[^>]*>[\s\S]*?<first-name[^>]*>([\s\S]*?)<\/first-name>/i);
   const lastMatch = content.match(/<author[^>]*>[\s\S]*?<last-name[^>]*>([\s\S]*?)<\/last-name>/i);
-  let author = 'Невідомий автор';
+  let author = t('unknownAuthor', lang);
   if (firstMatch || lastMatch) {
     const fn = firstMatch ? firstMatch[1].replace(/<[^>]+>/g, '').trim() : '';
     const ln = lastMatch ? lastMatch[1].replace(/<[^>]+>/g, '').trim() : '';
-    author = `${fn} ${ln}`.trim() || 'Невідомий автор';
+    author = `${fn} ${ln}`.trim() || t('unknownAuthor', lang);
   }
 
   // 2. Extract binary images
@@ -57,7 +58,7 @@ export function parseFb2Content(fileName: string, content: string): Book {
   // 4. Pattern for chapter headers
   const chapterRegex = /^\s*(?:глава|розділ|том|часть|частина|chapter|act|акт|эпизод|інтерлюдія|интерлюдия|пролог|эпилог|епілог)\s*[\dIVXLCDM.:\s_-]*/i;
   const isEnglish = /[a-zA-Z]{4,}/.test(title);
-  const defaultPrefix = isEnglish ? 'Chapter' : 'Глава';
+  const defaultPrefix = isEnglish ? 'Chapter' : t('chapter', lang);
 
   const itemRegex = /<(p|title|subtitle|empty-line)[^>]*>([\s\S]*?)<\/\1>|<empty-line\s*\/>/gi;
 
@@ -80,72 +81,53 @@ export function parseFb2Content(fileName: string, content: string): Book {
         paraText = `[IMG:${imgId}]`;
       }
     } else {
-      paraText = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      paraText = raw
+        .replace(/<[^>]+>/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
     }
 
     if (!paraText) continue;
 
-    // Detect if this tag or paragraph is a chapter boundary
-    const isHeading =
-      tag === 'title' ||
-      tag === 'subtitle' ||
-      (chapterRegex.test(paraText) &&
-        paraText.length < 110 &&
-        !paraText.includes(',') &&
-        !paraText.endsWith('.'));
+    // Check if this tag or text looks like a chapter header
+    const isExplicitTitleTag = tag === 'title' || tag === 'subtitle';
+    const matchesHeaderRegex = chapterRegex.test(paraText) && paraText.length < 100;
 
-    if (isHeading) {
+    if (isExplicitTitleTag || matchesHeaderRegex) {
       if (currentParagraphs.length > 0) {
-        // Collect only images used in this specific chapter
-        const chapterImages: Record<string, string> = {};
-        for (const p of currentParagraphs) {
-          const m = p.match(/^\[IMG:(.+)\]$/);
-          if (m && imagesMap[m[1]]) {
-            chapterImages[m[1]] = imagesMap[m[1]];
-          }
-        }
-
         chapters.push({
           id: `ch_${chOrder}`,
           title: currentTitle || `${defaultPrefix} ${chOrder}`,
           order: chOrder,
           content: [...currentParagraphs],
-          images: chapterImages,
+          images: imagesMap,
         });
         chOrder++;
         currentParagraphs = [];
       }
-      currentTitle = paraText;
+      currentTitle = paraText.substring(0, 80);
     } else {
       currentParagraphs.push(paraText);
     }
   }
 
-  // Push final chapter
+  // Push remaining paragraphs
   if (currentParagraphs.length > 0) {
-    const chapterImages: Record<string, string> = {};
-    for (const p of currentParagraphs) {
-      const m = p.match(/^\[IMG:(.+)\]$/);
-      if (m && imagesMap[m[1]]) {
-        chapterImages[m[1]] = imagesMap[m[1]];
-      }
-    }
-
     chapters.push({
       id: `ch_${chOrder}`,
       title: currentTitle || `${defaultPrefix} ${chOrder}`,
       order: chOrder,
       content: currentParagraphs,
-      images: chapterImages,
+      images: imagesMap,
     });
   }
 
   if (chapters.length === 0) {
     chapters.push({
       id: 'ch_1',
-      title: title,
+      title: title || (isEnglish ? 'Chapter 1' : `${t('chapter', lang)} 1`),
       order: 1,
-      content: ['Вміст книги порожній або не вдалося розпізнати текст.'],
+      content: [t('statusEmptyContent', lang)],
     });
   }
 

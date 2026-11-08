@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { Language } from '../types/book';
 import { t } from '../services/i18n';
@@ -27,6 +27,20 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ src, languag
       lastPositionRef.current = { x: 0, y: 0 };
     }
   }, [src]);
+
+  useEffect(() => {
+    if (!src) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [src, onClose]);
+
+  const formattedPercent = useMemo(() => {
+    const locale = language === 'uk' ? 'uk-UA' : language === 'ru' ? 'ru-RU' : 'en-US';
+    return new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 }).format(scale);
+  }, [scale, language]);
 
   if (!src) return null;
 
@@ -173,6 +187,9 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ src, languag
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('illustration', language)}
       className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col select-none overflow-hidden animate-in fade-in duration-150"
       onClick={onClose}
       onWheel={handleWheel}
@@ -187,7 +204,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ src, languag
       >
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono text-neutral-300 bg-[#23252e] px-2.5 py-1 rounded-md border border-[#323542]">
-            {Math.round(scale * 100)}%
+            {formattedPercent}
           </span>
           <button
             type="button"
@@ -235,7 +252,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({ src, languag
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseDown}
+        onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >

@@ -1,10 +1,10 @@
-import React from 'react';
-import { X, ChevronDown, Globe } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { X, ChevronDown, Globe, RotateCcw } from 'lucide-react';
 import { ReaderSettings, ThemePreset, THEME_PALETTES, DEFAULT_SETTINGS, Language } from '../types/book';
 import { Toggle } from './UI/Toggle';
 import { Slider } from './UI/Slider';
 import { SegmentedControl } from './UI/SegmentedControl';
-import { t } from '../services/i18n';
+import { t, TranslationKey } from '../services/i18n';
 
 interface RanobeSettingsModalProps {
   isOpen: boolean;
@@ -19,6 +19,15 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
   settings,
   onUpdateSettings,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const update = <K extends keyof ReaderSettings>(key: K, value: ReaderSettings[K]) => {
@@ -59,12 +68,15 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
     { preset: 'light', bg: '#e5e7eb', text: '#111827' },
     { preset: 'sepia', bg: '#fbf0d9', text: '#3c2c1e' },
     { preset: 'parchment', bg: '#e8d8b8', text: '#34251a' },
-    { preset: 'slate', bg: '#0a0a0a', text: '#c8c2b8' },
+    { preset: 'slate', bg: '#18181b', text: '#c8c2b8' },
     { preset: 'black', bg: '#0a0a0a', text: '#bdbdbd' },
   ];
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('settings', settings.language)}
       onClick={onClose}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
     >
@@ -79,6 +91,7 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-[#282a33] transition-colors"
+            title={t('close', settings.language)}
           >
             <X className="w-5 h-5" />
           </button>
@@ -103,40 +116,38 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
             />
           </div>
 
-          {/* Preset Selector */}
+          {/* Reset Action */}
           <div className="pt-3">
-            <div className="relative">
-              <select
-                value="default"
-                onChange={(e) => {
-                  if (e.target.value === 'reset') {
-                    onUpdateSettings({ ...DEFAULT_SETTINGS, language: settings.language });
-                  }
-                }}
-                className="w-full appearance-none bg-[#24262e] border border-[#343743] rounded-lg px-4 py-2.5 text-neutral-200 text-sm font-medium focus:outline-none focus:border-[#2196f3]"
-              >
-                <option value="default">{t('defaultPreset', settings.language)}</option>
-                <option value="reset">{t('resetSettings', settings.language)}</option>
-              </select>
-              <ChevronDown className="w-4 h-4 text-neutral-400 absolute right-3 top-3 pointer-events-none" />
-            </div>
+            <button
+              type="button"
+              onClick={() => onUpdateSettings({ ...DEFAULT_SETTINGS, language: settings.language })}
+              className="w-full py-2.5 px-4 rounded-lg bg-[#24262e] hover:bg-[#2c2f39] border border-[#343743] text-neutral-300 hover:text-white text-xs font-medium transition-colors flex items-center justify-center gap-2 active:scale-[0.99]"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-neutral-400" />
+              <span>{t('resetSettings', settings.language)}</span>
+            </button>
           </div>
 
           {/* Color Themes */}
           <div className="pt-3">
             <label className="block text-sm font-medium text-neutral-300 mb-3">{t('colorTheme', settings.language)}</label>
             <div className="grid grid-cols-6 gap-2 mb-3">
-              {themeList.map((t) => {
-                const isSelected = settings.theme === t.preset;
+              {themeList.map((item) => {
+                const isSelected = settings.theme === item.preset;
+                const themeKey = ('theme' + item.preset.charAt(0).toUpperCase() + item.preset.slice(1)) as TranslationKey;
+                const themeTitle = t(themeKey, settings.language);
+
                 return (
                   <button
-                    key={t.preset}
+                    key={item.preset}
                     type="button"
-                    onClick={() => handleThemeSelect(t.preset)}
+                    title={themeTitle}
+                    aria-label={themeTitle}
+                    onClick={() => handleThemeSelect(item.preset)}
                     className={`h-11 rounded-full flex items-center justify-center font-bold text-sm transition-transform active:scale-95 border-2 ${
-                      isSelected ? 'border-[#2196f3] ring-2 ring-[#2196f3]/40 scale-105' : 'border-transparent hover:opacity-90'
+                      isSelected ? 'border-[#2196f3] ring-2 ring-[#2196f3]/40 scale-105' : 'border-neutral-700/60 hover:opacity-90'
                     }`}
-                    style={{ backgroundColor: t.bg, color: t.text }}
+                    style={{ backgroundColor: item.bg, color: item.text }}
                   >
                     A
                   </button>
@@ -264,14 +275,16 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
           </div>
 
           {/* Toggles */}
-          <div className="pt-3 space-y-1">
+          <div className="pt-3 space-y-2">
             <Toggle
               label={t('disableImagesOpt', settings.language)}
+              description={t('disableImagesDesc', settings.language)}
               checked={settings.disableImages}
               onChange={(val) => update('disableImages', val)}
             />
             <Toggle
               label={t('hideChapterHeaderOpt', settings.language)}
+              description={t('hideChapterHeaderDesc', settings.language)}
               checked={settings.hideChapterHeader}
               onChange={(val) => update('hideChapterHeader', val)}
             />
@@ -325,7 +338,7 @@ export const RanobeSettingsModal: React.FC<RanobeSettingsModalProps> = ({
             onClick={onClose}
             className="w-full py-2.5 bg-[#2196f3] hover:bg-[#1e88e5] text-white font-medium text-sm rounded-lg transition-colors shadow"
           >
-            OK
+            {t('close', settings.language)}
           </button>
         </div>
       </div>

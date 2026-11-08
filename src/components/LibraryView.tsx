@@ -1,6 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
 import {
-  BookOpen,
   Plus,
   Search,
   Trash2,
@@ -11,6 +10,7 @@ import {
   X,
   Globe,
 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { Book, ReaderSettings, DEFAULT_SETTINGS } from '../types/book';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { TopStatusBarSpacer } from './TopStatusBarSpacer';
@@ -40,11 +40,17 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [failedCovers, setFailedCovers] = useState<Record<string, boolean>>({});
 
   const lang = settings?.language || 'uk';
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isCancelledRef = useRef<boolean>(false);
+
+  const isNative = typeof window !== 'undefined' && Capacitor.isNativePlatform();
+  const statusBarHeight = isNative
+    ? 'max(env(safe-area-inset-top, 0px), 38px)'
+    : 'env(safe-area-inset-top, 0px)';
 
   const filteredBooks = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -73,7 +79,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     isCancelledRef.current = false;
     setIsLoading(true);
     setErrorMessage(null);
-    setStatusMessage(`${t('statusReadingFile', lang)}: ${file.name}...`);
+    setStatusMessage(t('statusReadingProgress', lang, { filename: file.name }));
 
     try {
       const lowerName = file.name.toLowerCase();
@@ -90,45 +96,46 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           import('../services/parsers/fb2Parser'),
         ]);
         const buffer = await file.arrayBuffer();
-        if (checkCancelled()) throw new Error(t('statusScanCancelled', lang));
+        if (checkCancelled()) throw new DOMException('Scanning cancelled by user', 'AbortError');
         const zip = await JSZipMod.default.loadAsync(buffer);
         const fb2Entry = Object.values(zip.files).find((f) => f.name.toLowerCase().endsWith('.fb2'));
         if (!fb2Entry) {
           throw new Error(t('statusZipNoFb2', lang));
         }
         const text = await fb2Entry.async('text');
-        if (checkCancelled()) throw new Error(t('statusScanCancelled', lang));
-        newBook = parseFb2Content(fb2Entry.name, text);
+        if (checkCancelled()) throw new DOMException('Scanning cancelled by user', 'AbortError');
+        newBook = parseFb2Content(fb2Entry.name, text, lang);
       } else if (ext === 'fb2') {
         setStatusMessage(t('statusReadingFb2', lang));
         const [{ parseFb2Content }, text] = await Promise.all([
           import('../services/parsers/fb2Parser'),
           file.text(),
         ]);
-        if (checkCancelled()) throw new Error(t('statusScanCancelled', lang));
-        newBook = parseFb2Content(file.name, text);
+        if (checkCancelled()) throw new DOMException('Scanning cancelled by user', 'AbortError');
+        newBook = parseFb2Content(file.name, text, lang);
       } else if (ext === 'txt') {
         setStatusMessage(t('statusSplittingTxt', lang));
         const [{ parseTxtContent }, text] = await Promise.all([
           import('../services/parsers/txtParser'),
           file.text(),
         ]);
-        if (checkCancelled()) throw new Error(t('statusScanCancelled', lang));
-        newBook = parseTxtContent(file.name, text);
+        if (checkCancelled()) throw new DOMException('Scanning cancelled by user', 'AbortError');
+        newBook = parseTxtContent(file.name, text, lang);
       } else if (ext === 'epub') {
         setStatusMessage(t('statusParsingEpub', lang));
         const [{ parseEpubFile }, buffer] = await Promise.all([
           import('../services/parsers/epubParser'),
           file.arrayBuffer(),
         ]);
-        if (checkCancelled()) throw new Error(t('statusScanCancelled', lang));
+        if (checkCancelled()) throw new DOMException('Scanning cancelled by user', 'AbortError');
         newBook = await parseEpubFile(
           file.name,
           buffer,
           checkCancelled,
           (curr, total) => {
-            setStatusMessage(`EPUB: ${curr} / ${total}...`);
-          }
+            setStatusMessage(t('statusParsingProgress', lang, { format: 'EPUB', current: curr, total }));
+          },
+          lang
         );
       } else if (ext === 'pdf') {
         setStatusMessage(t('statusExtractingPdf', lang));
@@ -136,14 +143,15 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           import('../services/parsers/pdfParser'),
           file.arrayBuffer(),
         ]);
-        if (checkCancelled()) throw new Error(t('statusScanCancelled', lang));
+        if (checkCancelled()) throw new DOMException('Scanning cancelled by user', 'AbortError');
         newBook = await parsePdfFile(
           file.name,
           buffer,
           checkCancelled,
           (curr, total) => {
-            setStatusMessage(`PDF: ${curr} / ${total}...`);
-          }
+            setStatusMessage(t('statusParsingProgress', lang, { format: 'PDF', current: curr, total }));
+          },
+          lang
         );
       } else if (ext === 'zip') {
         setStatusMessage(t('statusUnpackingZip', lang));
@@ -151,7 +159,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           import('jszip'),
           file.arrayBuffer(),
         ]);
-        if (checkCancelled()) throw new Error(t('statusScanCancelled', lang));
+        if (checkCancelled()) throw new DOMException('Scanning cancelled by user', 'AbortError');
         const zip = await JSZipMod.default.loadAsync(buffer);
         const fb2Entry = Object.values(zip.files).find((f) => f.name.toLowerCase().endsWith('.fb2'));
         if (fb2Entry) {
@@ -159,12 +167,12 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             import('../services/parsers/fb2Parser'),
             fb2Entry.async('text'),
           ]);
-          newBook = parseFb2Content(fb2Entry.name, text);
+          newBook = parseFb2Content(fb2Entry.name, text, lang);
         } else {
           const mime = await zip.file('mimetype')?.async('text');
           if (mime && mime.includes('epub')) {
             const { parseEpubFile } = await import('../services/parsers/epubParser');
-            newBook = await parseEpubFile(file.name, buffer, checkCancelled);
+            newBook = await parseEpubFile(file.name, buffer, checkCancelled, undefined, lang);
           } else {
             throw new Error(t('statusUnsupportedFormat', lang));
           }
@@ -174,7 +182,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       }
 
       if (checkCancelled()) {
-        throw new Error(t('statusScanCancelled', lang));
+        throw new DOMException('Scanning cancelled by user', 'AbortError');
       }
 
       if (newBook) {
@@ -182,7 +190,16 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         await onAddBook(newBook);
       }
     } catch (err: any) {
-      if (err.message !== t('statusScanCancelled', lang)) {
+      if (
+        err.name === 'AbortError' ||
+        err.message === 'ABORT_SCAN' ||
+        err.message === t('statusScanCancelled', lang) ||
+        err.message === 'Scanning cancelled by user' ||
+        err.message === 'Сканування скасовано користувачем' ||
+        err.message === 'Сканирование отменено пользователем'
+      ) {
+        // Quietly dismiss
+      } else {
         setErrorMessage(err.message || 'Error');
       }
     } finally {
@@ -198,22 +215,35 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     const diff = Date.now() - ts;
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return t('timeJustNow', lang);
-    if (mins < 60) return `${mins} ${t('timeMinsAgo', lang)}`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours} ${t('timeHoursAgo', lang)}`;
-    const days = Math.floor(hours / 24);
-    return `${days} ${t('timeDaysAgo', lang)}`;
+    const localeCode = lang === 'uk' ? 'uk-UA' : lang === 'ru' ? 'ru-RU' : 'en-US';
+    try {
+      const rtf = new Intl.RelativeTimeFormat(localeCode, { numeric: 'auto', style: 'short' });
+      if (mins < 60) return rtf.format(-mins, 'minute');
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return rtf.format(-hours, 'hour');
+      const days = Math.floor(hours / 24);
+      return rtf.format(-days, 'day');
+    } catch {
+      if (mins < 60) return `${mins} ${t('timeMinsAgo', lang)}`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `${hours} ${t('timeHoursAgo', lang)}`;
+      const days = Math.floor(hours / 24);
+      return `${days} ${t('timeDaysAgo', lang)}`;
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#121316] text-neutral-200 flex flex-col">
-      {/* Safe Area Notch Shield (Gray Bar at top) */}
+      {/* Safe Area Notch Shield */}
       <TopStatusBarSpacer bgColor="#16171b" />
 
       {/* Top Navbar */}
       <header
-        className="sticky top-0 z-30 bg-[#16171b]/95 border-b border-[#282a33] backdrop-blur-md px-4 py-3 sm:px-8 flex items-center justify-between transition-all"
-        style={{ marginTop: 'max(env(safe-area-inset-top, 0px), 38px)' }}
+        className="sticky z-30 bg-[#16171b]/95 border-b border-[#282a33] backdrop-blur-md px-4 py-3 sm:px-8 flex items-center justify-between transition-all"
+        style={{
+          top: statusBarHeight,
+          marginTop: statusBarHeight,
+        }}
       >
         <div className="flex items-center gap-2.5 min-w-0 pr-2">
           <img
@@ -253,7 +283,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             type="button"
             disabled={isLoading}
             onClick={() => fileInputRef.current?.click()}
-            className="h-9 w-[128px] sm:w-[132px] px-2.5 bg-[#2196f3] hover:bg-[#1e88e5] text-white rounded-lg text-xs font-semibold shadow transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0"
+            className="h-9 min-w-[128px] w-auto px-3.5 bg-[#2196f3] hover:bg-[#1e88e5] text-white rounded-lg text-xs font-semibold shadow transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0"
           >
             {isLoading ? (
               <Loader2 className="w-4 h-4 animate-spin shrink-0" />
@@ -265,34 +295,38 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         </div>
       </header>
 
-      {/* Main Container */}
-      <main
-        className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-5 space-y-5"
-        style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 16px) + 32px)' }}
-      >
-        {/* Active Scanning Status with CANCEL Button */}
-        {isLoading && statusMessage && (
-          <div className="p-3.5 bg-[#1a2130] border border-[#2196f3]/50 rounded-xl flex items-center justify-between gap-3 text-xs text-[#64b5f6] shadow-lg animate-in fade-in">
-            <div className="flex items-center gap-2.5 truncate">
-              <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#2196f3]" />
-              <span className="font-medium truncate">{statusMessage}</span>
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col gap-6">
+        {/* Parsing Progress / Loading Banner */}
+        {isLoading && (
+          <div className="bg-[#1c1f2b] border border-[#2b3954] rounded-xl p-4 flex items-center justify-between shadow-lg animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-5 h-5 text-[#2196f3] animate-spin shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-neutral-200">
+                  {statusMessage || t('statusReadingFile', lang)}
+                </p>
+                <p className="text-[10px] text-neutral-400 mt-0.5">
+                  {t('appName', lang)} - {t('librarySubtitle', lang)}
+                </p>
+              </div>
             </div>
             <button
               type="button"
               onClick={handleCancelUpload}
-              className="shrink-0 px-3 py-1.5 bg-[#252c3d] hover:bg-[#2f384d] text-white border border-[#3b4661] rounded-lg text-xs font-semibold transition-colors active:scale-95"
+              className="text-xs font-semibold text-neutral-400 hover:text-white px-3 py-1.5 bg-[#262c3e] hover:bg-[#323a52] rounded-lg transition-colors border border-[#3b4766]"
             >
               {t('cancel', lang)}
             </button>
           </div>
         )}
 
-        {/* Error Alert */}
+        {/* Dismissible Error Banner */}
         {errorMessage && (
-          <div className="p-3.5 bg-red-950/40 border border-red-800/50 rounded-xl flex items-center justify-between gap-2.5 text-xs text-red-300 animate-in fade-in">
-            <div className="flex items-center gap-2.5 truncate">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-              <span>{errorMessage}</span>
+          <div className="bg-red-950/40 border border-red-800/60 rounded-xl p-4 flex items-start justify-between gap-3 text-red-200 text-xs shadow-lg animate-in fade-in">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">{errorMessage}</div>
             </div>
             <button
               type="button"
@@ -313,8 +347,18 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               placeholder={t('searchPlaceholder', lang)}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-[#1c1d22] border border-[#2c2e37] rounded-xl pl-10 pr-4 py-2 text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-[#2196f3] transition-colors"
+              className="w-full bg-[#1c1d22] border border-[#2c2e37] rounded-xl pl-10 pr-9 py-2 text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-[#2196f3] transition-colors"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-2.5 p-1 rounded-md text-neutral-400 hover:text-white hover:bg-[#2b2d37] transition-colors"
+                title={t('clearSearch', lang)}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           <div className="text-xs text-neutral-400 flex items-center gap-2 self-end sm:self-center font-mono">
@@ -353,8 +397,16 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {filteredBooks.map((book) => {
-              const progressPct = Math.round(
-                ((book.currentChapterIndex + 1) / book.totalChapters) * 100
+              const progressPct = Math.min(
+                100,
+                Math.max(
+                  0,
+                  Math.round(
+                    ((book.currentChapterIndex + (book.scrollPercentage || 0) / 100) /
+                      (book.totalChapters || 1)) *
+                      100
+                  )
+                )
               );
 
               return (
@@ -369,14 +421,15 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                   }}
                 >
                   {/* Book Cover */}
-                  <div className="relative w-full aspect-[2/3] bg-[#242630] overflow-hidden flex items-center justify-center select-none">
-                    {book.coverUrl ? (
+                  <div className="relative w-full aspect-[2/3] bg-[#242620] overflow-hidden flex items-center justify-center select-none">
+                    {book.coverUrl && !failedCovers[book.id] ? (
                       <img
                         src={book.coverUrl}
                         alt={book.title}
                         loading="lazy"
                         decoding="async"
                         draggable={false}
+                        onError={() => setFailedCovers((prev) => ({ ...prev, [book.id]: true }))}
                         className="w-full h-full object-cover sm:group-hover:scale-105 transition-transform duration-300 pointer-events-none select-none"
                       />
                     ) : (
@@ -398,7 +451,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                       {book.format}
                     </span>
 
-                    {/* Delete action button - always touch-accessible on mobile! */}
+                    {/* Delete action button */}
                     <button
                       type="button"
                       onClick={(e) => {

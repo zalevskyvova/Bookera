@@ -1,5 +1,6 @@
 import * as pdfjsLib from 'pdfjs-dist';
-import { Book, Chapter } from '../../types/book';
+import { Book, Chapter, Language } from '../../types/book';
+import { t } from '../i18n';
 
 // Configure pdfjs worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -8,7 +9,8 @@ export async function parsePdfFile(
   fileName: string,
   arrayBuffer: ArrayBuffer,
   checkCancelled?: () => boolean,
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  lang: Language = 'uk'
 ): Promise<Book> {
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
   const pdf = await loadingTask.promise;
@@ -26,7 +28,7 @@ export async function parsePdfFile(
   for (let pageNum = 1; pageNum <= numPages; pageNum++) {
     if (checkCancelled && checkCancelled()) {
       loadingTask.destroy();
-      throw new Error('Сканування скасовано користувачем');
+      throw new DOMException('Scanning cancelled by user', 'AbortError');
     }
 
     if (onProgress && pageNum % 2 === 0) {
@@ -66,7 +68,9 @@ export async function parsePdfFile(
     if (pageNum % pagesPerChapter === 0 || pageNum === numPages) {
       if (currentChapterParagraphs.length > 0) {
         const startPage = pageNum - (pageNum % pagesPerChapter || pagesPerChapter) + 1;
-        const chTitle = pagesPerChapter === 1 ? `Сторінка ${pageNum}` : `Сторінки ${startPage} - ${pageNum}`;
+        const pageLabel = t('page', lang);
+        const pagesLabel = t('pages', lang);
+        const chTitle = pagesPerChapter === 1 ? `${pageLabel} ${pageNum}` : `${pagesLabel} ${startPage} - ${pageNum}`;
         
         chapters.push({
           id: `ch_${currentChapterNum}`,
@@ -83,9 +87,9 @@ export async function parsePdfFile(
   if (chapters.length === 0) {
     chapters.push({
       id: 'ch_1',
-      title: 'Вміст',
+      title: t('tableOfContents', lang),
       order: 1,
-      content: ['Не вдалося вилучити текстовий шар із PDF файлу.'],
+      content: [t('pdfNoText', lang)],
     });
   }
 
@@ -94,7 +98,7 @@ export async function parsePdfFile(
   return {
     id: bookId,
     title,
-    author: 'PDF Документ',
+    author: t('pdfDocument', lang),
     format: 'pdf',
     totalChapters: chapters.length,
     currentChapterId: chapters[0].id,

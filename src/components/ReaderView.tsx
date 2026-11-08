@@ -9,6 +9,7 @@ import {
   BookmarkCheck,
   CheckCircle2,
 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { Book, Chapter, ReaderSettings, Bookmark, Language } from '../types/book';
 import { RanobeSettingsModal } from './RanobeSettingsModal';
 import { BookmarksDrawer } from './BookmarksDrawer';
@@ -100,6 +101,8 @@ const ChapterBody: React.FC<ChapterBodyProps> = memo(
                 data-paragraph-index={idx}
                 className="select-text"
                 onDoubleClick={(e) => {
+                  const sel = window.getSelection()?.toString().trim();
+                  if (sel && sel.length > 0) return;
                   e.stopPropagation();
                   onBookmarkParagraph(idx, paragraph);
                 }}
@@ -158,6 +161,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
   const scrollSaveTimerRef = useRef<number | null>(null);
   const isAddingBookmarkRef = useRef(false);
 
+  const isNative = typeof window !== 'undefined' && Capacitor.isNativePlatform();
+  const statusBarHeight = isNative
+    ? 'max(env(safe-area-inset-top, 0px), 38px)'
+    : 'env(safe-area-inset-top, 0px)';
+
   const currentChapter: Chapter | undefined = book.chapters[currentChapterIndex];
 
   // Load bookmarks for current book
@@ -170,13 +178,29 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
     loadBookmarks();
   }, [loadBookmarks]);
 
+  const saveCurrentProgressSync = useCallback(() => {
+    if (scrollSaveTimerRef.current !== null) {
+      window.clearTimeout(scrollSaveTimerRef.current);
+      scrollSaveTimerRef.current = null;
+    }
+    if (!containerRef.current || !currentChapter) return;
+    const { scrollTop: st, scrollHeight, clientHeight } = containerRef.current;
+    const maxScroll = scrollHeight - clientHeight;
+    const pct = maxScroll > 0 ? (st / maxScroll) * 100 : 0;
+    const { index: visiblePIndex } = findVisibleParagraphIndex(containerRef.current);
+    updateReadingProgress(book.id, currentChapter.id, currentChapterIndex, pct, visiblePIndex);
+  }, [book.id, currentChapter, currentChapterIndex]);
+
   useEffect(() => {
     return () => {
-      if (scrollSaveTimerRef.current !== null) {
-        window.clearTimeout(scrollSaveTimerRef.current);
-      }
+      saveCurrentProgressSync();
     };
-  }, []);
+  }, [saveCurrentProgressSync]);
+
+  const handleBackToLibrary = () => {
+    saveCurrentProgressSync();
+    onBack();
+  };
 
   // Handle settings update
   const handleUpdateSettings = useCallback((newSettings: ReaderSettings) => {
@@ -194,11 +218,12 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
       }
 
       setCurrentChapterIndex(index);
+      const totalCh = book.chapters.length || 1;
       updateReadingProgress(
         book.id,
         book.chapters[index].id,
         index,
-        (index / book.chapters.length) * 100,
+        (index / totalCh) * 100,
         targetParagraphIndex
       );
 
@@ -231,7 +256,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
     }
   }, [book.currentParagraphIndex]);
 
-  // Debounced scroll handler
+  // Debounced scroll handler with hysteresis to avoid oscillation loops
   const handleScroll = () => {
     const container = containerRef.current;
     if (!container || !currentChapter) return;
@@ -239,10 +264,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
 
     if (settings.menuTrigger === 'scroll') {
       const delta = scrollTop - lastScrollY.current;
-      if (delta > 10 && scrollTop > 80) {
-        setShowBars((prev) => (prev ? false : prev));
-      } else if (delta < -10) {
-        setShowBars((prev) => (!prev ? true : prev));
+      if (delta > 35 && scrollTop > 80) {
+        setShowBars(false);
+      } else if (delta < -35) {
+        setShowBars(true);
       }
     }
     lastScrollY.current = scrollTop;
@@ -284,8 +309,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
           snippet = found.text;
         }
 
-        if (!snippet) {
-          snippet = currentChapter.content[pIndex] || currentChapter.title;
+        if (!snippet || snippet.startsWith('[IMG:')) {
+          snippet = `[${t('illustration', settings.language)}]`;
         }
 
         const bookmark: Bookmark = {
@@ -300,7 +325,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
 
         const added = await addBookmark(bookmark);
         await loadBookmarks();
-        showToast(added ? t('bookmarkAdded', settings.language) : t('bookmarkAdded', settings.language));
+        showToast(added ? t('bookmarkAdded', settings.language) : t('bookmarkAlreadyExists', settings.language));
       } finally {
         isAddingBookmarkRef.current = false;
       }
@@ -355,6 +380,27 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
     ? settings.customTextColor
     : `#${settings.customTextColor}`;
 
+  if (!book.chapters || book.chapters.length === 0) {
+    return (
+      <div
+        className="w-full h-screen flex flex-col items-center justify-center p-6 text-center select-none"
+        style={{ backgroundColor: resolvedBg, color: resolvedText }}
+      >
+        <p className="text-base font-semibold mb-2">{t('statusEmptyContent', settings.language)}</p>
+        <button
+          type="button"
+          onClick={handleBackToLibrary}
+          className="mt-4 px-4 py-2 bg-[#2196f3] text-white rounded-lg text-sm font-medium shadow"
+        >
+          {t('backToLibrary', settings.language)}
+        </button>
+      </div>
+    );
+  }
+
+  const totalChapters = book.chapters.length || 1;
+  const chapterPercentage = Math.min(100, Math.round(((currentChapterIndex + 1) / totalChapters) * 100));
+
   return (
     <div
       className="relative w-full h-screen overflow-hidden flex flex-col select-text"
@@ -363,20 +409,21 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
         color: resolvedText,
       }}
     >
-      {/* Camera / Status Bar Safe-Area Gray Rectangle */}
+      {/* Camera / Status Bar Safe-Area Rectangle */}
       <div
         aria-hidden="true"
-        className="fixed top-0 left-0 right-0 z-50 bg-[#1c1c1e] border-b border-[#2c2c2e] shadow-sm pointer-events-none select-none transition-colors"
+        className="fixed top-0 left-0 right-0 z-50 pointer-events-none select-none transition-colors duration-200"
         style={{
-          height: 'max(env(safe-area-inset-top, 0px), 38px)',
+          backgroundColor: resolvedBg,
+          height: statusBarHeight,
         }}
       />
 
       {/* Toast Notification */}
       {toastMessage && (
         <div
-          className="fixed left-1/2 transform -translate-x-1/2 z-50 bg-[#252527] text-white border border-[#333336] px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs font-medium animate-in fade-in duration-200"
-          style={{ top: 'calc(max(env(safe-area-inset-top, 0px), 38px) + 16px)' }}
+          className="fixed left-1/2 transform -translate-x-1/2 z-[70] bg-[#252527] text-white border border-[#333336] px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs font-medium animate-in fade-in duration-200"
+          style={{ top: `calc(${statusBarHeight} + 16px)` }}
         >
           <CheckCircle2 className="w-4 h-4 text-[#2196f3]" />
           <span>{toastMessage}</span>
@@ -385,17 +432,18 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
 
       {/* Top Floating App Bar */}
       <div
-        className={`fixed left-0 right-0 z-40 bg-[#252527] border-b border-[#303033] text-neutral-200 px-3 py-2.5 flex items-center justify-between transition-transform duration-200 ${
-          showBars ? 'translate-y-0' : '-translate-y-full'
+        className={`fixed left-0 right-2.5 sm:right-3 z-40 bg-[#252527] border-b border-[#303033] text-neutral-200 px-3 flex items-center justify-between transition-transform duration-200 shadow-md ${
+          showBars ? 'translate-y-0' : '-translate-y-full pointer-events-none'
         }`}
         style={{
-          top: 'max(env(safe-area-inset-top, 0px), 38px)',
+          top: statusBarHeight,
+          height: '52px',
         }}
       >
         <div className="flex items-center gap-3 truncate pr-2">
           <button
             type="button"
-            onClick={onBack}
+            onClick={handleBackToLibrary}
             className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-[#252730] transition-colors"
             title={t('backToLibrary', settings.language)}
           >
@@ -465,9 +513,9 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
             setShowBars((prev) => !prev);
           }
         }}
-        className="flex-1 overflow-y-auto overscroll-contain"
+        className="w-full h-full overflow-y-auto overscroll-contain"
         style={{
-          paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 38px) + 54px)',
+          paddingTop: `calc(${statusBarHeight} + 56px)`,
           paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 16px) + 64px)',
         }}
       >
@@ -532,11 +580,13 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
 
       {/* Bottom Floating Bar */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-40 bg-[#1c1c1c] border-t border-[#2a2a2c] text-neutral-200 px-4 pt-2.5 flex items-center justify-between transition-transform duration-200 ${
-          showBars ? 'translate-y-0' : 'translate-y-full'
+        className={`fixed left-0 right-2.5 sm:right-3 z-40 bg-[#1c1c1c] border-t border-[#2a2a2c] text-neutral-200 px-4 flex items-center justify-between transition-transform duration-200 shadow-lg ${
+          showBars ? 'translate-y-0' : 'translate-y-full pointer-events-none'
         }`}
         style={{
-          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+          bottom: 0,
+          height: '54px',
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
         }}
       >
         <button
@@ -554,8 +604,12 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ book, onBack, initialSet
           onClick={() => setIsTocOpen(true)}
           className="px-3 py-1.5 rounded-lg bg-[#252527] border border-[#333336] text-xs font-medium text-neutral-200 hover:bg-[#2e2e32] transition-colors"
         >
-          {t('chapter', settings.language)} {currentChapterIndex + 1} / {book.chapters.length} (
-          {Math.round(((currentChapterIndex + 1) / book.chapters.length) * 100)}%)
+          {t('chapterProgress', settings.language, {
+            chapter: t('chapter', settings.language),
+            current: currentChapterIndex + 1,
+            total: book.chapters.length,
+            pct: chapterPercentage,
+          })}
         </button>
 
         <button

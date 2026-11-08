@@ -1,6 +1,7 @@
-import { Book, Chapter } from '../../types/book';
+import { Book, Chapter, Language } from '../../types/book';
+import { t } from '../i18n';
 
-export function parseTxtContent(fileName: string, content: string): Book {
+export function parseTxtContent(fileName: string, content: string, lang: Language = 'uk'): Book {
   const lines = content.split(/\r?\n/);
   const title = fileName.replace(/\.[^/.]+$/, "");
   
@@ -8,7 +9,7 @@ export function parseTxtContent(fileName: string, content: string): Book {
   const chapterRegex = /^\s*(?:глава|розділ|том|часть|частина|chapter|act|акт|эпизод|інтерлюдія|интерлюдия|пролог|эпилог|епілог)\s*[\dIVXLCDM.:\s_-]*/i;
   
   const isEnglish = /[a-zA-Z]{4,}/.test(title + ' ' + content.slice(0, 500));
-  const defaultPrefix = isEnglish ? 'Chapter' : 'Глава';
+  const defaultPrefix = isEnglish ? 'Chapter' : t('chapter', lang);
   
   const chapters: Chapter[] = [];
   let currentChapterTitle = "";
@@ -58,7 +59,7 @@ export function parseTxtContent(fileName: string, content: string): Book {
       const chNum = Math.floor(c / chunkSize) + 1;
       chunkedChapters.push({
         id: `ch_${chNum}`,
-        title: isEnglish ? `Part ${chNum}` : `Частина ${chNum}`,
+        title: isEnglish ? `Part ${chNum}` : `${t('part', lang)} ${chNum}`,
         order: chNum,
         content: chunk,
       });
@@ -69,9 +70,9 @@ export function parseTxtContent(fileName: string, content: string): Book {
   if (chapters.length === 0) {
     chapters.push({
       id: 'ch_1',
-      title: title || (isEnglish ? 'Chapter 1' : 'Глава 1'),
+      title: title || (isEnglish ? 'Chapter 1' : `${defaultPrefix} 1`),
       order: 1,
-      content: [isEnglish ? 'No text content found.' : 'Текст відсутній або порожній.'],
+      content: [t('statusEmptyContent', lang)],
     });
   }
 
@@ -80,7 +81,7 @@ export function parseTxtContent(fileName: string, content: string): Book {
   return {
     id: bookId,
     title,
-    author: 'Невідомий автор',
+    author: t('unknownAuthor', lang),
     format: 'txt',
     totalChapters: chapters.length,
     currentChapterId: chapters[0].id,

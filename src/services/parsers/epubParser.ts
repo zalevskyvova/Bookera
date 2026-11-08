@@ -1,18 +1,20 @@
 import JSZip from 'jszip';
-import { Book, Chapter } from '../../types/book';
+import { Book, Chapter, Language } from '../../types/book';
+import { t } from '../i18n';
 
 export async function parseEpubFile(
   fileName: string,
   fileData: ArrayBuffer,
   checkCancelled?: () => boolean,
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  lang: Language = 'uk'
 ): Promise<Book> {
   const zip = await JSZip.loadAsync(fileData);
 
   // 1. Find rootfile in container.xml
   const containerXml = await zip.file('META-INF/container.xml')?.async('text');
   if (!containerXml) {
-    throw new Error('Невалідний EPUB: відсутній META-INF/container.xml');
+    throw new Error(t('errEpubNoContainer', lang));
   }
 
   const parser = new DOMParser();
@@ -20,7 +22,7 @@ export async function parseEpubFile(
   const rootfileEl = containerDoc.querySelector('rootfile');
   const opfPath = rootfileEl?.getAttribute('full-path');
   if (!opfPath) {
-    throw new Error('Не знайдено full-path в container.xml');
+    throw new Error(t('errEpubNoFullPath', lang));
   }
 
   const opfDir = opfPath.includes('/') ? opfPath.substring(0, opfPath.lastIndexOf('/') + 1) : '';
@@ -28,7 +30,7 @@ export async function parseEpubFile(
   // 2. Read OPF file
   const opfXml = await zip.file(opfPath)?.async('text');
   if (!opfXml) {
-    throw new Error(`Не вдалося завантажити OPF файл: ${opfPath}`);
+    throw new Error(t('errEpubOpfFail', lang, { path: opfPath }));
   }
 
   const opfDoc = parser.parseFromString(opfXml, 'text/xml');
@@ -37,7 +39,7 @@ export async function parseEpubFile(
   const title = opfDoc.querySelector('metadata > title, metadata > dc\\:title')?.textContent?.trim() ||
     fileName.replace(/\.[^/.]+$/, "");
   const author = opfDoc.querySelector('metadata > creator, metadata > dc\\:creator')?.textContent?.trim() ||
-    'Невідомий автор';
+    t('unknownAuthor', lang);
 
   // Manifest items map: id -> { href, mediaType }
   const manifest: Record<string, { href: string; mediaType: string }> = {};
@@ -89,7 +91,7 @@ export async function parseEpubFile(
 
   for (let i = 0; i < spineItems.length; i++) {
     if (checkCancelled && checkCancelled()) {
-      throw new Error('Сканування скасовано користувачем');
+      throw new DOMException('Scanning cancelled by user', 'AbortError');
     }
     if (onProgress && i % 3 === 0) {
       onProgress(i + 1, spineItems.length);
@@ -108,7 +110,7 @@ export async function parseEpubFile(
     const chapterRegex = /^\s*(?:глава|розділ|том|часть|частина|chapter|act|акт|эпизод|інтерлюдія|интерлюдия|пролог|эпилог|епілог)\s*[\dIVXLCDM.:\s_-]*/i;
 
     const isEnglish = /[a-zA-Z]{4,}/.test(title);
-    const defaultPrefix = isEnglish ? 'Chapter' : 'Розділ';
+    const defaultPrefix = isEnglish ? 'Chapter' : t('chapter', lang);
     let chapterTitle = doc.querySelector('h1, h2, h3, title')?.textContent?.trim() || `${defaultPrefix} ${chIndex}`;
     chapterTitle = chapterTitle.replace(/\s+/g, ' ').substring(0, 80);
 
@@ -169,7 +171,7 @@ export async function parseEpubFile(
       id: 'ch_1',
       title: title,
       order: 1,
-      content: ['Вміст книги не знайдено або порожній.'],
+      content: [t('statusEmptyContent', lang)],
     });
   }
 

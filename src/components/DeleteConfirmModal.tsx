@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Trash2, X } from 'lucide-react';
 import { Book, Language } from '../types/book';
 import { t } from '../services/i18n';
@@ -18,10 +18,22 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onCancel]);
+
   if (!isOpen || !book) return null;
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('deleteConfirmTitle', language)}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onCancel}
     >
@@ -43,13 +55,14 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
             type="button"
             onClick={onCancel}
             className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-[#282a33]"
+            title={t('cancel', language)}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <p className="text-xs text-neutral-300 leading-relaxed bg-[#141518] p-3 rounded-xl border border-[#272832]">
-          {t('deleteConfirmDesc', language)} &ldquo;{book.title}&rdquo;? {t('deleteConfirmWarn', language)}
+          {t('deleteConfirmDescFormatted', language, { title: book.title })} {t('deleteConfirmWarn', language)}
         </p>
 
         <div className="grid grid-cols-2 gap-2.5 pt-1">

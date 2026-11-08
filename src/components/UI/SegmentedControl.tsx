@@ -28,17 +28,26 @@ export function SegmentedControl<T extends string | number | boolean>({
           <span>{label}</span>
         </div>
       )}
-      <div className="grid grid-cols-2 p-1 bg-[#1c1d21] rounded-lg border border-[#2e3038] gap-1">
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className="grid p-1 bg-[#1c1d21] rounded-lg border border-[#2e3038] gap-1"
+        style={{
+          gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))`,
+        }}
+      >
         {options.map((option) => {
           const isActive = option.value === value;
           return (
             <button
               key={String(option.value)}
               type="button"
+              role="radio"
+              aria-checked={isActive}
               onClick={() => onChange(option.value)}
-              className={`py-2 px-3 text-sm font-medium rounded-md transition-all duration-150 text-center ${
+              className={`py-2 px-2 sm:px-3 text-xs sm:text-sm font-medium rounded-md transition-all duration-150 text-center truncate ${
                 isActive
-                  ? 'bg-[#383b44] text-white shadow-sm'
+                  ? 'bg-[#383b44] text-white shadow-sm font-semibold'
                   : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#25272e]'
               }`}
             >

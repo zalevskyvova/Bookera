@@ -18,6 +18,12 @@ export function App() {
   const [settings, setSettings] = useState<ReaderSettings>(DEFAULT_SETTINGS);
   const [isInitializing, setIsInitializing] = useState(true);
 
+  // Sync HTML lang and title with selected language
+  useEffect(() => {
+    document.documentElement.lang = settings.language;
+    document.title = `${t('appName', settings.language)} - ${t('librarySubtitle', settings.language)}`;
+  }, [settings.language]);
+
   // Initialize books and settings
   const refreshBooks = useCallback(async () => {
     const list = await getAllBooks();

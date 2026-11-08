@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Bookmark, Trash2, ArrowRight } from 'lucide-react';
 import { Bookmark as BookmarkType, Language } from '../types/book';
 import { t } from '../services/i18n';
@@ -20,6 +20,15 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
   onSelectBookmark,
   onDeleteBookmark,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const formatDate = (ts: number) => {
@@ -30,6 +39,9 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('bookmarksList', language)}
       onClick={onClose}
       className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
     >
@@ -53,13 +65,19 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-[#282a33] transition-colors"
+            title={t('close', language)}
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* List of bookmarks */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div
+          className="flex-1 overflow-y-auto p-4 space-y-3"
+          style={{
+            paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 16px) + 16px)',
+          }}
+        >
           {bookmarks.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 text-neutral-400">
               <div className="w-16 h-16 rounded-full bg-[#23252d] flex items-center justify-center mb-4 text-neutral-500">
@@ -78,10 +96,10 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
               >
                 <div>
                   <div className="flex items-center justify-between text-xs text-[#2196f3] font-medium mb-1.5">
-                    <span>{bm.chapterTitle}</span>
-                    <span className="text-[11px] text-neutral-500 font-mono">{formatDate(bm.timestamp)}</span>
+                    <span className="truncate pr-2">{bm.chapterTitle}</span>
+                    <span className="text-[11px] text-neutral-500 font-mono shrink-0">{formatDate(bm.timestamp)}</span>
                   </div>
-                  <p className="text-sm text-neutral-300 line-clamp-3 italic bg-[#17181d] p-2.5 rounded-lg border border-[#262730]">
+                  <p className="text-sm text-neutral-300 line-clamp-3 italic bg-[#17181d] p-2.5 rounded-lg border border-[#262730] leading-relaxed pb-1">
                     "{bm.snippet}"
                   </p>
                 </div>

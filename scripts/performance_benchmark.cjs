@@ -211,11 +211,16 @@ async function runBenchmarks() {
   // 2. Client-side Parsing Benchmark inside Browser Sandbox
   console.log(`\n[3/3] Running In-Browser Stress Benchmarks...`);
 
+  const distAssets = fs.readdirSync(path.join(DIST_DIR, 'assets'));
+  const fb2File = distAssets.find(f => f.startsWith('fb2Parser-') && f.endsWith('.js'));
+  const txtFile = distAssets.find(f => f.startsWith('txtParser-') && f.endsWith('.js'));
+  const epubFile = distAssets.find(f => f.startsWith('epubParser-') && f.endsWith('.js'));
+
   const parserResults = await page.evaluate(async (data) => {
     // Dynamic import of parsers from built chunks
-    const fb2Module = await import('/assets/fb2Parser-CYuWytms.js');
-    const txtModule = await import('/assets/txtParser-D1eyBaGq.js');
-    const epubModule = await import('/assets/epubParser-BxnTljsi.js');
+    const fb2Module = await import(`/assets/${data.fb2File}`);
+    const txtModule = await import(`/assets/${data.txtFile}`);
+    const epubModule = await import(`/assets/${data.epubFile}`);
 
     // FB2 Parse Benchmark
     const tFb2Start = performance.now();
@@ -246,7 +251,10 @@ async function runBenchmarks() {
   }, {
     fb2Xml,
     txtData,
-    epubBase64: Buffer.from(epubBuffer).toString('base64')
+    epubBase64: Buffer.from(epubBuffer).toString('base64'),
+    fb2File,
+    txtFile,
+    epubFile
   });
 
   results.push({

@@ -23,6 +23,21 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
   const [search, setSearch] = useState('');
   const activeItemRef = useRef<HTMLButtonElement>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setSearch('');
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const indexedChapters = useMemo(
     () => chapters.map((ch, idx) => ({ ch, originalIndex: idx })),
     [chapters]
@@ -47,6 +62,9 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('tableOfContents', language)}
       onClick={onClose}
       className="fixed inset-0 z-50 flex justify-start bg-black/70 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
     >
@@ -70,6 +88,7 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-[#282a33] transition-colors"
+            title={t('close', language)}
           >
             <X className="w-5 h-5" />
           </button>
@@ -90,7 +109,12 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
         </div>
 
         {/* Chapters list */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+        <div
+          className="flex-1 overflow-y-auto p-3 space-y-1.5"
+          style={{
+            paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 16px) + 16px)',
+          }}
+        >
           {filteredChapters.length === 0 ? (
             <div className="text-center py-8 text-neutral-500 text-sm">
               {t('noChapters', language)}
@@ -122,7 +146,11 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
                   </div>
 
                   {isCurrent && (
-                    <span className="shrink-0 text-[#2196f3]">
+                    <span
+                      className="shrink-0 text-[#2196f3]"
+                      title={t('current', language)}
+                      aria-label={t('current', language)}
+                    >
                       <Check className="w-4 h-4" />
                     </span>
                   )}
